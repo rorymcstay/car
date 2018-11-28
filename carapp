@@ -4,8 +4,6 @@ FROM python:2.7-alpine3.7
 RUN echo "http://dl-4.alpinelinux.org/alpine/v3.7/main" >> /etc/apk/repositories && \
     echo "http://dl-4.alpinelinux.org/alpine/v3.7/community" >> /etc/apk/repositories
 
-# install chromedriver
-
 ENV MONGO_URL="0.0.0.0:27017"
 ENV MONGO_COLLECTION="cars"
 ENV MONGO_DATABASE="mydatabase"
@@ -13,6 +11,8 @@ ENV MONGO_DATABASE="mydatabase"
 WORKDIR /initialiser
 
 COPY .. /initialiser
+
+# install chromedriver
 
 RUN apk update
 RUN apk add chromium chromium-chromedriver

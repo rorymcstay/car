@@ -6,9 +6,9 @@ from time import sleep
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from Crawling.webCrawler import get_results, get_cars
+from crawling.webCrawler import get_results, get_cars
 from selenium import webdriver
-from Persisting.MongoService import MongoService
+from persisting.mongoservice import MongoService
 
 
 class market:
@@ -67,7 +67,8 @@ class market:
         self.collect_cars(n)
         default_car=[]
         for car in self.cars: default_car.append(self.mapping(car))
-        for car in default_car: mongo.insert(car)
+        for car in default_car:
+            mongo.insert(car)
 
     def watch(self):
         while True:
@@ -95,5 +96,9 @@ class market:
             market.latest_source = []
             get_cars(self)
             sleep(600)
+
+
+
+
 
     # TODO Make the watch method. When started, it will monitor a market place and repeatedly check for new cars
