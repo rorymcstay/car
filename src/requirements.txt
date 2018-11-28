@@ -1,0 +1,6 @@
+flask
+bson
+selenium
+pymongo
+slimit
+beautifulsoup4

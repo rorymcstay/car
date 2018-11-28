@@ -1,0 +1,10 @@
+FROM joyzoursky/python-chromedriver:latest
+
+WORKDIR /initialiser
+
+COPY .. /initialiser
+
+RUN pip install -r ./requirements.txt
+
+CMD ["python", "database_initialisation.py" ]
+
