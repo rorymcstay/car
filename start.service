@@ -1,9 +1,21 @@
-from service.command import *
-from src.marketplaces import donedeal
-from service.query import *
+from flask import Flask
+from service.command import command
+# from src.marketplaces import donedeal
+from service.query import query
+from src.market import market
 
-command.run(port=4000)
+donedeal = market(url_stub_1="https://www.donedeal.co.uk/cars?sort=publishdate%20desc",
+                  url_stub_2="&sort=publishdate%20desc",
+                  result_stub="https://www.donedeal.co.uk/cars-for-sale/",
+                  wait_for="searchResultsPanel",
+                  wait_for_car="js-featured-block",
+                  n_page=28,
+                  json_identifier='window.adDetails',
+                  mapping="DoneDeal")
 
-# query.run(port=5000)
+app = Flask(__name__)
 
+app.register_blueprint(command)
+app.register_blueprint(query)
 
+app.run()

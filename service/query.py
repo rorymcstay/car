@@ -1,11 +1,10 @@
 import json
-from flask import Flask, request
+from flask import request, Blueprint
 from car.service.headers import JSON
 from car.src.persisting.mongoservice import MongoService
 from car.src.persisting.queryconstructor import QueryConstructor
 
-query = Flask(__name__)
-
+query = Blueprint('query', __name__,)
 service = MongoService()
 
 
@@ -35,4 +34,5 @@ def filter():
     response = json.dumps(service.queryToJSON(query))
     return response
 
-query.run()
+
+

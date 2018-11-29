@@ -14,9 +14,10 @@ class MongoService:
     in a terminal
     """
     def __init__(self):
-        self.client = pymongo.MongoClient(os.environ['MONGO_URL'])
+        self.client = pymongo.MongoClient(os.environ['MONGO_URL'], username=os.environ['USERNAME'], password=os.environ['PASSWORD'])
         self.db = self.client[os.environ['MONGO_DATABASE']]
         self.collection = self.db[os.environ["MONGO_COLLECTION"]]
+
 
     def insert(self, car):
         """
