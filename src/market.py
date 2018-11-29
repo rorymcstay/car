@@ -6,10 +6,10 @@ from time import sleep
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.chrome.options import Options
+from car.src.persisting.mongoservice import MongoService
 from crawling.webCrawler import get_results, get_cars
 from selenium import webdriver
-from persisting.mongoservice import MongoService
-
 
 class market:
     """
@@ -27,7 +27,7 @@ class market:
                  result_stub,
                  wait_for_car,
                  json_identifier,
-                 mapping):
+                 mapping, arguments=["--headless"]):
         """
 
         :param url_stub_1: This is the start of results page url ie. https://donedeal.ie/cars
@@ -38,6 +38,7 @@ class market:
         :param wait_for_car: This is the CSS item which must be loaded for an individual car to be loaded
         :param json_identifier: What the JSON
         :param mapping: The string of the file defining the mapping from source json to generic car object
+        :param arguments: as in a list of arguments to pass to the chrome driver
         """
         self.url_stub_1 = url_stub_1
         self.url_stub_2 = url_stub_2
@@ -51,6 +52,8 @@ class market:
         self.cars = []
         self.mapping = mapping
         self.driver = webdriver.Chrome()
+        self.chrome_options = Options()
+        self.chrome_options.add_argument(arguments)
 
     def collect_cars(self, n):
         """
@@ -97,8 +100,7 @@ class market:
             get_cars(self)
             sleep(600)
 
-
-
-
+    def get_fields(self):
+        return self.__init__
 
     # TODO Make the watch method. When started, it will monitor a market place and repeatedly check for new cars

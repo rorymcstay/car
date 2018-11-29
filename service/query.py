@@ -1,21 +1,20 @@
 import json
 from flask import Flask, request
+from car.service.headers import JSON
 from car.src.persisting.mongoservice import MongoService
 from car.src.persisting.queryconstructor import QueryConstructor
 
-from car.service.headers import JSON
-
-querying = Flask(__name__)
+query = Flask(__name__)
 
 service = MongoService()
 
 
-@querying.route("/cars")
+@query.route("/cars")
 def getAllCars():
     return json.dumps(service.queryToJSON({}))
 
 
-@querying.route('/cars/')
+@query.route('/cars/')
 @JSON
 def filter():
     """
@@ -36,4 +35,4 @@ def filter():
     response = json.dumps(service.queryToJSON(query))
     return response
 
-querying.run()
+query.run()

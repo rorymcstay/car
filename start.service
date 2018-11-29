@@ -1,0 +1,9 @@
+from service.command import *
+from src.marketplaces import donedeal
+from service.query import *
+
+command.run(port=4000)
+
+# query.run(port=5000)
+
+
