@@ -14,9 +14,13 @@ class MongoService:
     in a terminal
     """
     def __init__(self):
-        self.client = pymongo.MongoClient(os.environ['MONGO_URL'], username=os.environ['USERNAME'], password=os.environ['PASSWORD'])
-        self.db = self.client[os.environ['MONGO_DATABASE']]
-        self.collection = self.db[os.environ["MONGO_COLLECTION"]]
+        self.client = pymongo.MongoClient(os.getenv('MONGO_URL', '0.0.0.0:27017'), username=os.getenv('USERNAME', 'root'), password=os.getenv('PASSWORD', 'root'))
+        self.db = self.client[os.getenv('MONGO_DATABASE', 'my_database')]
+        self.collection = self.db[os.getenv("MONGO_COLLECTION", 'cars')]
+        self.market_details_collection = self.db['marketDetails']
+
+    def save_market_details(self, market_definition):
+        x = self.market_details_collection.insert(market_definition)
 
 
     def insert(self, car):

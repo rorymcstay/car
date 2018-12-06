@@ -1,6 +1,5 @@
 from mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
 
-
 def DoneDeal(car_old):
     """
     :param car_old:
@@ -68,5 +67,4 @@ def DoneDeal(car_old):
                         },
     "adDescription" : car_old['description'],
     "adPhotos":get_photos_in_a_list('photos', 'large', car_old)}
-    client.insert(car)
-    return
+    return car

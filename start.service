@@ -1,21 +1,31 @@
-from flask import Flask
-from service.command import command
-# from src.marketplaces import donedeal
-from service.query import query
-from src.market import market
 
-donedeal = market(url_stub_1="https://www.donedeal.co.uk/cars?sort=publishdate%20desc",
+from flask import Flask
+from car.market.src.mapping.DoneDeal import DoneDeal
+from car.service.src.command import Command
+from car.service.src.query import query
+from car.market.src.market import market
+
+donedeal = market(name='donedeal',
+                  url_stub_1="https://www.donedeal.co.uk/cars?sort=publishdate%20desc",
                   url_stub_2="&sort=publishdate%20desc",
                   result_stub="https://www.donedeal.co.uk/cars-for-sale/",
                   wait_for="searchResultsPanel",
                   wait_for_car="js-featured-block",
                   n_page=28,
                   json_identifier='window.adDetails',
-                  mapping="DoneDeal")
+                  mapping=DoneDeal,
+                  browser='http://127.0.0.1:4444/wd/hub')
+
+
+print 'car-market-app: markets Initialised'
 
 app = Flask(__name__)
-
-app.register_blueprint(command)
+Command.register(app)
 app.register_blueprint(query)
 
+print 'car-market-app: routes made'
+
+print app.url_map
+
 app.run()
+

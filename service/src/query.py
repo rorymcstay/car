@@ -1,8 +1,8 @@
 import json
 from flask import request, Blueprint
-from car.service.headers import JSON
-from car.src.persisting.mongoservice import MongoService
-from car.src.persisting.queryconstructor import QueryConstructor
+from car.market.src.persisting.queryconstructor import QueryConstructor
+from car.service.src.headers import JSON
+from car.market.src.persisting.mongoservice import MongoService
 
 query = Blueprint('query', __name__,)
 service = MongoService()

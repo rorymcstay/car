@@ -1,15 +1,12 @@
-
 import re
 import sys
 from telnetlib import EC
 from time import sleep
+from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.chrome.options import Options
-from car.src.persisting.mongoservice import MongoService
 from crawling.webCrawler import get_results, get_cars
-from selenium import webdriver
 
 class market:
     """
@@ -20,16 +17,20 @@ class market:
     in order, determined by the partial url strings.
     """
 
-    def __init__(self, url_stub_1,
+    def __init__(self,
+                 name,
+                 url_stub_1,
                  url_stub_2,
                  wait_for,
                  n_page,
                  result_stub,
                  wait_for_car,
                  json_identifier,
-                 mapping, arguments=["--headless"]):
+                 mapping,
+                 browser):
         """
 
+        :type name: object
         :param url_stub_1: This is the start of results page url ie. https://donedeal.ie/cars
         :param url_stub_2: This is the remainder of the url, it may be empty string or /desc/start=28 etc
         :param wait_for: This is the CSS item which must be loaded so that there are results on the page
@@ -38,8 +39,9 @@ class market:
         :param wait_for_car: This is the CSS item which must be loaded for an individual car to be loaded
         :param json_identifier: What the JSON
         :param mapping: The string of the file defining the mapping from source json to generic car object
-        :param arguments: as in a list of arguments to pass to the chrome driver
+        :param browser: url of selenium container hosting browser (firefox)
         """
+        self.name = name
         self.url_stub_1 = url_stub_1
         self.url_stub_2 = url_stub_2
         self.wait_for = wait_for
@@ -51,9 +53,12 @@ class market:
         self.json_identifier = json_identifier
         self.cars = []
         self.mapping = mapping
-        self.driver = webdriver.Chrome()
-        self.chrome_options = Options()
-        self.chrome_options.add_argument(arguments)
+
+        self.options = webdriver.ChromeOptions()
+        self.options.add_argument("--lang=en")
+        self.options.add_argument("--headless")
+        self.driver = webdriver.Remote(command_executor=browser,
+                                       desired_capabilities=webdriver.DesiredCapabilities.FIREFOX)
 
     def collect_cars(self, n):
         """
@@ -65,13 +70,12 @@ class market:
         get_cars(self)
         return
 
-    def initialise(self, n):
-        mongo = MongoService()
+    def initialise(self, n, service):
         self.collect_cars(n)
-        default_car=[]
+        default_car = []
         for car in self.cars: default_car.append(self.mapping(car))
         for car in default_car:
-            mongo.insert(car)
+            service.insert(car)
 
     def watch(self):
         while True:
@@ -81,7 +85,7 @@ class market:
             for x in 2:
                 driver.get(self.url_stub_1 + str(x * self.n_page) + self.url_stub_2)
                 try:
-                    element_present = EC.presence_of_element_located((By.ID, market.wait_for))
+                    element_present = EC.presence_of_element_located((By.ID, self.wait_for))
                     WebDriverWait(driver, 10).until(element_present)
                 except TimeoutException:
                     print("Timed out waiting for page to load")
@@ -91,16 +95,16 @@ class market:
             cars = list(set(cars))
             latest_cars = []
             for i in cars:
-                if i in market.latest_urls:
+                if i in self.latest_urls:
                     print("Already have it")
                 else:
                     latest_cars.append(i)
-            market.latest_urls = []
-            market.latest_source = []
+            self.latest_urls = []
+            self.latest_source = []
             get_cars(self)
             sleep(600)
 
-    def get_fields(self):
-        return self.__init__
+    def quit_browser(self):
+        self.driver.quit()
 
     # TODO Make the watch method. When started, it will monitor a market place and repeatedly check for new cars
