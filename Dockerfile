@@ -7,8 +7,9 @@ WORKDIR /home
 COPY market ./car/
 COPY service ./car/
 COPY __init__.py ./car/
-COPY requirements.txt ./car/requirements.txt
+COPY ./requirements.txt ./car/requirements.txt
+COPY start.service ./car/start.service
 
-RUN pip install -r car/requirements.txt
+RUN pip install -r ./car/requirements.txt
 
-CMD ["python", "start.service" ]
+CMD ["python", "./car/start.service" ]

@@ -39,7 +39,7 @@ class market:
         :param wait_for_car: This is the CSS item which must be loaded for an individual car to be loaded
         :param json_identifier: What the JSON
         :param mapping: The string of the file defining the mapping from source json to generic car object
-        :param browser: url of selenium container hosting browser (firefox)
+        :param browser: url of selenium container hosting browser
         """
         self.name = name
         self.url_stub_1 = url_stub_1
@@ -55,16 +55,16 @@ class market:
         self.mapping = mapping
 
         self.options = webdriver.ChromeOptions()
-        self.options.add_argument("--lang=en")
-        self.options.add_argument("--headless")
+        # self.options.add_argument("--lang=en")
+        # self.options.add_argument("--headless")
         self.driver = webdriver.Remote(command_executor=browser,
-                                       desired_capabilities=webdriver.DesiredCapabilities.FIREFOX)
+                                       desired_capabilities=webdriver.DesiredCapabilities.CHROME)
 
     def collect_cars(self, n):
         """
-        Loads up the database
+        Loads up the market's cache preparing it for mapping
         :param n:
-        :return:
+        :return fills market.cars:
         """
         get_results(self, pages=n)
         get_cars(self)

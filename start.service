@@ -14,7 +14,7 @@ donedeal = market(name='donedeal',
                   n_page=28,
                   json_identifier='window.adDetails',
                   mapping=DoneDeal,
-                  browser='http://127.0.0.1:4444/wd/hub')
+                  browser='http://172.30.0.2:4444/wd/hub')
 
 
 print 'car-market-app: markets Initialised'
