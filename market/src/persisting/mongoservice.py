@@ -22,6 +22,14 @@ class MongoService:
     def save_market_details(self, market_definition):
         x = self.market_details_collection.insert(market_definition)
 
+    def return_all_markets(self):
+        x = self.market_details_collection.find()
+        page_sanitized = json.loads(json_util.dumps(x))
+        data = []
+        for i in x:
+            data.append(i)
+        return data
+
 
     def insert(self, car):
         """

@@ -23,12 +23,12 @@ def update_progress(job_title, progress):
     sys.stdout.flush()
 
 
-def get_results(market, pages, over_write=True):
+def get_results(market, page_number, over_write=True):
     """
     This function collects the html source for a specified market place and number of pages
 
     :param market: The Market object
-    :param pages: The number of pages to get
+    :param page_number: The number of pages to get
     :param over_write: should the collected source overwrite what is within the market instance?
     :return: Updates market.latest_source list with html source with javascript compiled. It also
     updates the latest_urls.
@@ -38,35 +38,33 @@ def get_results(market, pages, over_write=True):
         market.latest_source = []
     driver = market.driver
     cars = []
-    for x in range(pages):
-        update_progress("Getting car URLs", x/pages)  # Progress bar
-        driver.get(market.url_stub_1 + str(x * market.n_page) + market.url_stub_2)
-        try:
-            element_present = EC.presence_of_element_located((By.ID, market.wait_for))
-            WebDriverWait(driver, 10).until(element_present)
-            content = driver.page_source
-            cars.extend(re.findall(r'' + market.result_stub + '[^\"]+', content))
-        except TimeoutException:
-            print("Failed to load result page - Check URL stubs and internet")
-    car_urls = list(set(cars))
+
+    driver.get(market.url_stub_1 + str(page_number * market.n_page) + market.url_stub_2)
+    try:
+        element_present = EC.presence_of_element_located((By.ID, market.wait_for))
+        WebDriverWait(driver, 10).until(element_present)
+        content = driver.page_source
+        cars.extend(re.findall(r'' + market.result_stub + '[^\"]+', content))
+    except TimeoutException:
+        print("Failed to load result page - Check URL stubs and internet")
+    market.latest_urls = list(set(cars))
+
 
     # Now getting source code
     print("Beginning source code extraction")
     missed_pages = 0
     j = 0
-    for url in car_urls:
-        update_progress("Getting Source", j/len(car_urls))  # Progress bar
-        update_progress("Succesful", x/pages)  # Progress bar
+    for url in market.latest_urls:
+        update_progress("loading Source", j/len(market.latest_urls))  # Progress bar
         driver.get(url)
         try:
             element_present = EC.presence_of_element_located((By.ID, market.wait_for_car))
-            WebDriverWait(driver, 10).until(element_present)
+            WebDriverWait(driver, 20).until(element_present)
             market.latest_source.append({'url': url, 'source': driver.page_source})
+            print 'saved source'
         except TimeoutException:
             print("Timed out waiting for page to load")
             missed_cars = missed_pages+1
-            print("Skipping " + market.latest_urls['url'])
-            print("missed" + str(missed_cars)+" out of " + str(j))
         j = j+1
     return
 

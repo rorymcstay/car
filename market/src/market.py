@@ -4,6 +4,7 @@ from telnetlib import EC
 from time import sleep
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from crawling.webCrawler import get_results, get_cars
@@ -54,28 +55,41 @@ class market:
         self.cars = []
         self.mapping = mapping
 
-        self.options = webdriver.ChromeOptions()
-        # self.options.add_argument("--lang=en")
-        # self.options.add_argument("--headless")
-        self.driver = webdriver.Remote(command_executor=browser,
-                                       desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+        # Headless Remote driver
+
+        # self.options = webdriver.ChromeOptions()
+        # # self.options.add_argument("--lang=en")
+        # # self.options.add_argument("--headless")
+        # self.driver = webdriver.Remote(command_executor=browser,
+        #                                desired_capabilities=webdriver.DesiredCapabilities.CHROME)
+
+        # local driver
+        self.driver = webdriver.Chrome()
+        arguments=['--headless']
+        self.chrome_options = Options()
+        self.chrome_options.add_argument(arguments)
 
     def collect_cars(self, n):
         """
         Loads up the market's cache preparing it for mapping
         :param n:
-        :return fills market.cars:
+        :return fills market.:
         """
-        get_results(self, pages=n)
+        get_results(self, page_number=n)
         get_cars(self)
         return
 
     def initialise(self, n, service):
-        self.collect_cars(n)
-        default_car = []
-        for car in self.cars: default_car.append(self.mapping(car))
-        for car in default_car:
-            service.insert(car)
+        for i in range(n):
+            self.collect_cars(i)
+            default_car = []
+            for car in self.cars:
+                try:
+                    default_car.append(self.mapping(car))
+                except:
+                    print 'Parsing error'
+            for car in default_car:
+                service.insert(car)
 
     def watch(self):
         while True:
