@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from crawling.webCrawler import get_results, get_cars
 
-class market:
+class Market:
     """
     This is the market class. You must specify the CSS identifier/selector
     to ensure the browser waits for that item before moving onto the next set of
@@ -54,6 +54,7 @@ class market:
         self.json_identifier = json_identifier
         self.cars = []
         self.mapping = mapping
+        self.key = {}
 
         # Headless Remote driver
 

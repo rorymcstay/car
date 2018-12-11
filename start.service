@@ -1,18 +1,7 @@
 
 from flask import Flask
-from car.service.src.command import Command
-from car.service.src.query import query
-
-# donedeal = market(name='donedeal',
-#                   url_stub_1="https://www.donedeal.co.uk/cars?sort=publishdate%20desc",
-#                   url_stub_2="&sort=publishdate%20desc",
-#                   result_stub="https://www.donedeal.co.uk/cars-for-sale/",
-#                   wait_for="searchResultsPanel",
-#                   wait_for_car="js-featured-block",
-#                   n_page=28,
-#                   json_identifier='window.adDetails',
-#                   mapping=DoneDeal,
-#                   browser='http://172.30.0.2:4444/wd/hub')
+from car.service.src.Command import Command
+from car.service.src.Query import Query
 
 
 print 'car-market-app: markets Initialised'
@@ -20,8 +9,7 @@ print 'car-market-app: markets Initialised'
 
 app = Flask(__name__)
 Command.register(app)
-app.register_blueprint(query)
-
+Query.register(app)
 print 'car-market-app: routes made'
 
 print app.url_map

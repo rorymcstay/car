@@ -1,7 +1,7 @@
-from market import market
+from Market import Market
 from car.market.src.mapping.DoneDeal import DoneDeal
 
-donedeal = market(name='donedeal',
+donedeal = Market(name='donedeal',
                   url_stub_1="https://www.donedeal.co.uk/cars?sort=publishdate%20desc",
                   url_stub_2="&sort=publishdate%20desc",
                   result_stub="https://www.donedeal.co.uk/cars-for-sale/",
