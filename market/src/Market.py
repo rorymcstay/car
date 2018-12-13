@@ -7,8 +7,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from crawling.webCrawler import get_results, get_cars
-
+from car.market.src.crawling.web_crawler import get_results, get_cars
 class Market:
     """
     This is the market class. You must specify the CSS identifier/selector
@@ -28,7 +27,8 @@ class Market:
                  wait_for_car,
                  json_identifier,
                  mapping,
-                 browser):
+                 browser,
+                 url_mapping):
         """
 
         :type name: object
@@ -55,6 +55,7 @@ class Market:
         self.cars = []
         self.mapping = mapping
         self.key = {}
+        self.url_mapping = url_mapping
 
         # Headless Remote driver
 

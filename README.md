@@ -94,7 +94,7 @@ The main methods:
 
 * querying methods explained in
 
-
+https://www.pistonheads.com/classifieds?Category=used-cars&M=Page=2
 
 #### Live methods
 
@@ -110,3 +110,4 @@ Get methods allow users to retrive information on cars. This can either be
 
     http://localhost/api/data/since=7days/car_make/car_model
 
+URL methods
