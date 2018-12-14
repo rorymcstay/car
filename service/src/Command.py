@@ -1,13 +1,17 @@
 from flask import request
 from flask_classy import FlaskView, route
+
+from car.market.src.crawling.WebCrawler import WebCrawler
 from car.market.src.mapping.DoneDeal import DoneDeal
 
 from car.market.src.Market import Market
 from car.market.src.mongo_service.MongoService import MongoService
 
 service = MongoService()
+DoneDealCrawler = WebCrawler(Done)
 markets = {}
 mappings = {'DoneDeal': DoneDeal}
+webcrawlers = {'DoneDeal': DoneDealCrawler}
 
 class Command(FlaskView):
 
@@ -19,15 +23,12 @@ class Command(FlaskView):
         market_definition = request.get_json()
         service.save_market_details(market_definition)
         markets[name] = Market(name=name,
-                               url_stub_1=str(market_definition['url_stub_1']),
-                               url_stub_2=str(market_definition['url_stub_2']),
-                               result_stub=str(market_definition['result_stub']),
-                               wait_for=str(market_definition['wait_for']),
                                wait_for_car=str(market_definition['wait_for_car']),
-                               n_page=str(market_definition['n_page']),
-                               json_identifier=str(market_definition['json_identifier']),
+                               result_body_class=str(market_definition['result_body_class']),
                                mapping=mappings[str(market_definition['mapping'])],
-                               browser=str(market_definition['browser']))
+                               json_identifier=str(market_definition['json_identifier']),
+                               next_page_css=str(market_definition['next_page_css']),
+                               webcrawler=webcrawlers[str(market_definition['webcrawler'])])
         return 'ok'
 
     @route('markets', methods=['GET'])
