@@ -1,68 +1,75 @@
+import threading
+import logging as LOG
+from car.market.src.crawling.WebCrawler import WebCrawler
 from car.market.src.mongo_service.MongoService import MongoService
 
+
 class Market:
-    """
-    This is the market class. You must specify the CSS identifier/selector
-    to ensure the browser waits for that item before moving onto the next set of
-    results.This. You must also provide the stub of the expected url of a results page.
-    The market class is called by get_results() to fetch a specified number of pages
-    in order, determined by the partial url strings.
-    """
 
-    def __init__(self, name, result_body_class, wait_for_car, json_identifier, next_page_css, mapping, webcrawler):
+    LOG = LOG.getLogger('WebCrawler')
 
-        """
-        :type result_body_class: str
-        :type name: object
-        :param wait_for_car: This is the CSS item which must be loaded for an individual car to be loaded
-        :param json_identifier: What the JSON
-        :param mapping: The string of the file defining the mapping from source json to generic car object
-        :param browser: url of selenium container hosting browser
-        """
-        self.next_page_css = next_page_css
-        self.result_body_class = result_body_class
+    def __init__(self, name, result_css, result_exclude, wait_for_car, json_identifier, next_page_xpath, mapper, router, remote=None):
+
         self.name = name
+
+        self.next_page_xpath = next_page_xpath
+        self.result_css = result_css
+        self.result_exclude = result_exclude
         self.wait_for_car = wait_for_car
         self.json_identifier = json_identifier
-        self.mapping = mapping
-        self.key = {}
-        self.webcrawler = webcrawler
-        self.service = MongoService()
 
-    def collect_cars(self, n, order):
+        self.crawler = WebCrawler(self, remote)
+        self.mapper = mapper
+        self.home = router
+
+        self.service = MongoService()
+        self.busy = False
+
+    def collect_cars(self):
         """
         Loads up the market's cache preparing it for mapping
         :param order:
         :param n:
         :return fills market.:
         """
-        webcrawler = self.webcrawler
-        webcrawler.DoneDeal(order)
-        base = webcrawler.base
-        webcrawler.driver.get(base)
+
         x = 0
-        while x < n:
-            webcrawler.load_queue()
-            for result in webcrawler.queue:
-                self.service.insert(webcrawler.get_result(result))
-            webcrawler.next_page()
+        while self.busy:
+            LOG.info("Page:%s", str(x))
+            self.crawler.load_queue()
+            for i in range(len(self.crawler.queue)):
+                self.crawler.load_queue()
+                result = self.crawler.queue[i]
+                rawCars = False
+                # Check if any of exclusion items are contained within the next attempt
+                if all(exclude not in result.text for exclude in self.result_exclude):
+                    rawCars = self.crawler.get_result(result, 120)
+                if rawCars is not False:
+                    for rawCar in rawCars:
+                        try:
+                            car = self.mapper(rawCar)
+                            self.service.insert(car)
+                            return
+                        except:
+                            pass
+            self.crawler.next_page(200)
             x = x + 1
-        return
 
+    def start(self):
+        self.crawler.driver.get(self.home)
+        self.busy = True
+        thread = threading.Thread(target=self.collect_cars(), args=())
+        thread.daemon = True
+        thread.start()
+        return "started"
 
+    def resume(self):
+        self.busy = True
+        thread = threading.Thread(target=self.collect_cars(), args=())
+        thread.daemon = True
+        thread.start()
+        return "resumed"
 
-
-
-    def initialise(self, n, service):
-        for i in range(n):
-            self.collect_cars(i)
-            default_car = []
-            for car in self.cars:
-                try:
-                    default_car.append(self.mapping(car))
-                except:
-                    print 'Parsing error'
-            for car in default_car:
-                service.insert(car)
-
-    # TODO Make the watch method. When started, it will monitor a market place and repeatedly check for new cars
+    def stop(self):
+        self.busy = False
+        return "paused"

@@ -6,3 +6,4 @@ pymongo
 slimit
 beautifulsoup4
 elasticsearch
+pyyaml
