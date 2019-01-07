@@ -46,10 +46,11 @@ class WebCrawler:
 
             options = Options()
             options.add_argument("--headless")
-            self.driver = remotewebdriver(command_executor="http://%s:%s/wd/hub" % (hub_host, port),
+            self.driver = remotewebdriver(command_executor=self.Market.browser.url,
                                           desired_capabilities=DesiredCapabilities.CHROME,
                                           options=options)
-            # TODO Cant establish connection
+            # TODO Cant establish connection - parse loggs for connection
+            # Connection timingi out
             LOG.info('Remote driver initiated for %s running on %s', self.Market.name, remote.name)
 
     def get_raw_car(self):
@@ -104,9 +105,10 @@ class WebCrawler:
                 LOG.warn("Expected element not found, refreshing page in %s seconds")
                 self.driver.refresh()
 
-    def safely_click(self, item, wait_for, selector, timeout, attempt):
+    def safely_click(self, item, wait_for, selector, timeout, attempt=0):
         """
         identifies xpath and css path to button. Attempts
+        :param attempt:
         :param selector:
         :param wait_for:
         :param timeout:

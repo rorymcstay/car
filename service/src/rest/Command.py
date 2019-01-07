@@ -27,7 +27,7 @@ class Command(FlaskView):
         market_definition = request.get_json()
         exclude = str(market_definition['result_exclude']).split(',')
         service.save_market_details(json.loads(market_definition))
-        markets[name] = Market(name=str(market_definition['name']),
+        markets[name] = Market(name=name,
                                result_css=str(market_definition['result_body_class']),
                                result_exclude=exclude,
                                wait_for_car=str(market_definition['wait_for_car']),
@@ -48,7 +48,7 @@ class Command(FlaskView):
         market_definition = request.get_json()
         exclude = str(market_definition['result_exclude']).split(',')
         # service.save_market_details(json.loads(str(market_definition)))
-        markets[name] = Market(name=str(name),
+        markets[str(name)] = Market(name=str(name),
                                result_css=str(market_definition['result_css']),
                                result_exclude=exclude,
                                wait_for_car=str(market_definition['wait_for_car']),
