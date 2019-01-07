@@ -6,10 +6,11 @@ from car.market.src.mongo_service.MongoService import MongoService
 
 class Market:
 
-    LOG = LOG.getLogger('WebCrawler')
+    def __init__(self, name, result_css, result_exclude, wait_for_car, json_identifier, next_page_xpath, mapper, router, remote=False):
+        """
 
-    def __init__(self, name, result_css, result_exclude, wait_for_car, json_identifier, next_page_xpath, mapper, router, remote=None):
-
+        :type remote: BrowserService
+        """
         self.name = name
 
         self.next_page_xpath = next_page_xpath
@@ -18,12 +19,19 @@ class Market:
         self.wait_for_car = wait_for_car
         self.json_identifier = json_identifier
 
-        self.crawler = WebCrawler(self, remote)
         self.mapper = mapper
         self.home = router
 
         self.service = MongoService()
         self.busy = False
+
+        if remote is False:
+            # starting dedicated browser container
+            self.crawler = WebCrawler(self)
+            return
+
+        self.browser = remote
+        self.crawler = WebCrawler(self, remote)
 
     def collect_cars(self):
         """

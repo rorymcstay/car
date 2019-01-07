@@ -1,0 +1,5 @@
+FROM selenium/node-chrome:latest
+
+ENV HUB_PORT 4444
+ENV START_XVFB false
+ENV HUB_HOST %s

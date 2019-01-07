@@ -2,14 +2,14 @@
 class Routers(object):
     def __init__(self):
 
-        DoneDeal_router = lambda make, model, sort: self.DoneDeal(make, model, sort)
+        donedeal_router = lambda make, model, sort: self.donedeal(make, model, sort)
         PistonHeads_router = lambda make, model, sort: self.PistonHeads(make, model, sort)
-        self._DoneDeal_router = DoneDeal_router
-        self._PistonHeads_router = PistonHeads_router
+        self._donedeal_router = donedeal_router
+        self._pistonheads_router = PistonHeads_router
 
         return
 
-    def DoneDeal(self, make, model, sort):
+    def donedeal(self, make, model, sort):
         if make and model is not None:
             base = "https://www.donedeal.co.uk/cars/" + make + "/" + model + "?sort=" + sort
         elif make is not None and model is None:

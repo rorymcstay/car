@@ -7,3 +7,4 @@ slimit
 beautifulsoup4
 elasticsearch
 pyyaml
+docker

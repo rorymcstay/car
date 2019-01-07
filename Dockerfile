@@ -10,6 +10,8 @@ COPY __init__.py ./car/
 COPY ./requirements.txt ./car/requirements.txt
 COPY start.service ./car/start.service
 
-RUN pip install -r ./car/requirements.txt
+WORKDIR ./car
 
-CMD ["python", "./car/start.service" ]
+RUN pip install -r ./requirements.txt
+
+CMD ["python", "./start.service" ]

@@ -3,7 +3,7 @@ from car.market.src.mapping.DoneDeal import DoneDeal
 
 class Mappers(object):
     def __init__(self):
-        self._DoneDeal_mapper = DoneDeal
+        self._donedeal_mapper = DoneDeal
 
     def __getitem__(self, item):
         return getattr(self, item)

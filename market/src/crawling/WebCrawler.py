@@ -1,11 +1,13 @@
 import json
 import logging as LOG
 import os
-
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, \
-    ElementClickInterceptedException, NoSuchElementException
+from selenium.webdriver.remote.webdriver import WebDriver as remotewebdriver
+import selenium.webdriver as webdriver
+from selenium.common.exceptions import (TimeoutException,
+                                        StaleElementReferenceException,
+                                        ElementClickInterceptedException,
+                                        NoSuchElementException)
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -13,20 +15,22 @@ from selenium.webdriver.support.ui import WebDriverWait
 from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
 class WebCrawler:
 
-    def __init__(self, market, remote=None):
+    def __init__(self, market, remote=False):
         """
-        :type market :class `Market`
+        :type remote: Container
+        :type market: Market
         """
 
         self.Market = market
         self.number_of_pages = None
         self.queue = None
         # determining location of driver
-        if remote is None:
+        if remote is False:
             # local driver
             self.driver = webdriver.Chrome()
 
@@ -36,18 +40,17 @@ class WebCrawler:
             self.chrome_options.add_argument(arguments)
             LOG.info('Local driver initiated for %s', self.Market.name)
         else:
-            # remote driver
-            self.options = webdriver.Chrome().create_options()
+            # Getting driver location
+            hub_host = remote.name
+            port = os.environ['DRIVER_PORT']
 
-            # adding options to driver
-            self.options.add_argument("--lang=en")
-            self.options.add_argument("--headless")
-
-            self.driver = webdriver.Remote(command_executor=remote,
-                                           desired_capabilities=webdriver.DesiredCapabilities.CHROME)
-            # self.driver = webdriver.RemoteWebDriver(command_executor=remote, desired_capabilities=)
-            LOG.info('Remote driver initiated for %s', self.Market.name)
-        self.current_car = None
+            options = Options()
+            options.add_argument("--headless")
+            self.driver = remotewebdriver(command_executor="http://%s:%s/wd/hub" % (hub_host, port),
+                                          desired_capabilities=DesiredCapabilities.CHROME,
+                                          options=options)
+            # TODO Cant establish connection
+            LOG.info('Remote driver initiated for %s running on %s', self.Market.name, remote.name)
 
     def get_raw_car(self):
         """

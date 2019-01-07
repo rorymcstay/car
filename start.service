@@ -1,8 +1,8 @@
 
 from flask import Flask
-from car.service.src.Command import Command
-from car.service.src.Query import Query
-
+from car.service.src.rest.Command import Command
+from car.service.src.rest.Query import Query
+import docker
 
 print 'car-market-app: markets Initialised'
 
