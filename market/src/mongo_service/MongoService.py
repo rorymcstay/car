@@ -1,7 +1,11 @@
+import logging as LOG
+
 import pymongo
 import os
 import json
 from bson import json_util, ObjectId
+
+from pymongo.errors import ConnectionFailure
 
 
 class MongoService:
@@ -37,6 +41,7 @@ class MongoService:
         else:
             car.adDetails.previousPrices = car_before.adDetails.previousPrices.append(car_before.adDetails.price)
             x = self.cars.update_one({'_id':car._id}, car)
+        LOG.info("Request to write %s %s to database returned %s", car.adDetails.url, x.inserted_id,x.acknowledged)
         return
 
     def read(self, query):
@@ -61,5 +66,8 @@ class MongoService:
                 json.dump(page_sanitized, outfile)
         else:
             return page_sanitized
+
+
+service = MongoService()
 
 

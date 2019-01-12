@@ -1,0 +1,8 @@
+FROM selenium/node-chrome:latest
+
+EXPOSE 4444
+EXPOSE 5900
+
+ENV HUB_HOST %s
+
+ENV START_XVFB false

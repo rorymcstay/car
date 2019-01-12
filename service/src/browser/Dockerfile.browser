@@ -1,5 +1,0 @@
-FROM selenium/node-chrome:3.141.59-dubnium
-
-ENV HUB_PORT 4444
-ENV START_XVFB false
-ENV HUB_HOST %s

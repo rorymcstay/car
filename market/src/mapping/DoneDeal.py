@@ -1,3 +1,5 @@
+import logging
+
 from mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
 
 def DoneDeal(car_old):
@@ -67,4 +69,5 @@ def DoneDeal(car_old):
                         },
     "adDescription" : car_old['description'],
     "adPhotos":get_photos_in_a_list('photos', 'large', car_old)}
+    logging.info("Mapped donedeal car succesfully")
     return car

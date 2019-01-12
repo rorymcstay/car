@@ -25,3 +25,4 @@ class Routers(object):
         return getattr(self, item)
 
 
+routes = Routers()

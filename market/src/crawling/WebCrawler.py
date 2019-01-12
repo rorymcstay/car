@@ -2,7 +2,6 @@ import json
 import logging as LOG
 import os
 from bs4 import BeautifulSoup
-from selenium.webdriver.remote.webdriver import WebDriver as remotewebdriver
 import selenium.webdriver as webdriver
 from selenium.common.exceptions import (TimeoutException,
                                         StaleElementReferenceException,
@@ -25,10 +24,12 @@ class WebCrawler:
         :type remote: Container
         :type market: Market
         """
-
+        LOG.getLogger('WebCrawler %s' % market.name)
         self.Market = market
         self.number_of_pages = None
         self.queue = None
+        self.page = 0
+        url = market.browser
         # determining location of driver
         if remote is False:
             # local driver
@@ -40,18 +41,16 @@ class WebCrawler:
             self.chrome_options.add_argument(arguments)
             LOG.info('Local driver initiated for %s', self.Market.name)
         else:
-            # Getting driver location
-            hub_host = remote.name
-            port = os.environ['DRIVER_PORT']
-
+            LOG.debug("Starting remote driver for %s", market.name)
             options = Options()
             options.add_argument("--headless")
-            self.driver = remotewebdriver(command_executor=self.Market.browser.url,
-                                          desired_capabilities=DesiredCapabilities.CHROME,
-                                          options=options)
+            self.driver = webdriver.Remote(command_executor=url,
+                                           desired_capabilities=DesiredCapabilities.CHROME,
+                                           options=options)
+
             # TODO Cant establish connection - parse loggs for connection
             # Connection timingi out
-            LOG.info('Remote driver initiated for %s running on %s', self.Market.name, remote.name)
+            LOG.info('Remote driver initiated for %s running on %s', self.Market.name, url)
 
     def get_raw_car(self):
         """
@@ -104,6 +103,9 @@ class WebCrawler:
             except TimeoutException:
                 LOG.warn("Expected element not found, refreshing page in %s seconds")
                 self.driver.refresh()
+    #     check to see if were on a results page
+        if self.driver.current_url is None:
+            self.driver.forward()
 
     def safely_click(self, item, wait_for, selector, timeout, attempt=0):
         """
@@ -161,6 +163,7 @@ class WebCrawler:
             next_button = self.driver.find_element_by_xpath(self.Market.next_page_xpath)
             LOG.debug("Have next button")
             self.safely_click(next_button, wait_for, By.CSS_SELECTOR, 120)
+            self.page = self.page + 1
         except TimeoutException:
             LOG.error("Could not get next page of results: %s ", TimeoutException.message)
             WebDriverWait(timeout)
@@ -174,7 +177,7 @@ class WebCrawler:
         try:
             self.queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
         except Exception:
-            LOG.error('Failed to load queue\n Message was: %s',Exception.message)
+            LOG.error('Failed to load queue\n Message was: %s', Exception.message)
             return
 
     def get_result(self, result, timeout):
@@ -190,3 +193,13 @@ class WebCrawler:
             self.safely_go_back(self.Market.result_css, By.CSS_SELECTOR, timeout)
             return result
         return False
+
+    def return_to_last_page(self):
+        self.driver.get(self.Market.home)
+        last_page = self.page
+        page = 0
+        while page < last_page:
+            page = page + 1
+            self.next_page(30)
+        LOG.info("Reloaded last page of results")
+        return

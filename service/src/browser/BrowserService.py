@@ -1,9 +1,12 @@
 import os
+import time
+
 import docker
 from io import BytesIO
 import logging as LOG
+from urlparse import urlparse
 
-from docker.errors import APIError, ImageNotFound
+from docker.errors import APIError
 
 
 class BrowserService:
@@ -21,14 +24,14 @@ class BrowserService:
             hub = self.client.containers.run(image=self.hub_image[0].id,
                                              detach=True,
                                              network=os.environ['APP_NAME'],
-                                             name=name + "_hub")
+                                             name=name + "hub")
         except APIError, e:
             if e.status_code == 409:
                 LOG.info('%s already has a hub. connecting' % name)
-                hub = self.client.containers.get('%s_hub' % name)
+                hub = self.client.containers.get('%shub' % name)
                 if hub.status != 'running':
                     try:
-                        self.client.containers.run('%s_hub' % name, detach=True)
+                        hub = self.client.containers.run(str(hub.name).lower(), detach=True)
                     except:
                         LOG.error("Error starting %s_hub. Container was already created but is not likely the issue",
                                   name)
@@ -39,13 +42,16 @@ class BrowserService:
                 raise
 
         LOG.info("%s hub started", name)
-        for line in hub.logs().split('\n'):
-            if 'wd/hub' in line:
-                hub.url = line.split(' ')[-1]
+
+        url = self.get_hub_host(hub)
+        if url is None:
+            time.sleep(10)
+            url = self.get_hub_host(hub)
 
                 # building browser image
         with open(self.browser) as image:
-            dockerfile = BytesIO(image.read() % str(hub.name).encode('utf-8'))
+
+            dockerfile = BytesIO(image.read() % urlparse(url).hostname)
             browser_image = self.client.images.build(fileobj=dockerfile, rm=True, tag='browser')
             # running browser image
 
@@ -53,11 +59,11 @@ class BrowserService:
                 browser = self.client.containers.run(image=browser_image[0].id,
                                                      detach=True,
                                                      network=os.environ['APP_NAME'],
-                                                     name=name + "_browser")
+                                                     name=name + "browser")
             except APIError, e:
                 if e.status_code == 409:
                     LOG.info('%s already has a browser. connecting' % name)
-                    browser = self.client.containers.get('%s_browser' % name)
+                    browser = self.client.containers.get('%sbrowser' % name)
                     if browser.status != 'running':
                         try:
                             self.client.containers.run(image=browser_image[0].id, detach=True)
@@ -67,13 +73,19 @@ class BrowserService:
                                 name)
                             raise
                 else:
-                    LOG.error("Error starting %s_browser", name)
+                    LOG.error("Error starting %sbrowser", name)
                     LOG.error("Docker error: %s", e.message)
                     raise
-        LOG.info("Webcrawler has started a new browser and hub instance browser:%s, hub:%s", browser.name, hub.name)
-        return hub
+        LOG.info("Webcrawler has started a browser instance:%s", browser.name)
+        return {'hub': hub, 'browser': browser, 'url': url}
 
+    def get_hub_host(self, hub):
+        for line in hub.logs().split('\n'):
+            if 'wd/hub' in line:
+                LOG.info(line)
+                return line.split(' ')[-1]
+        return None
 
-browser_service = BrowserService('%s/service/src/browser/Dockerfile.hub' % os.getcwd(),
-                                 '%s/service/src/browser/Dockerfile.browser' % os.getcwd())
-# browser = BrowserService('./Dockerfile.hub', './Dockerfile.browser')
+print os.getcwd()
+browser_service = BrowserService(os.environ['HUB'], os.environ['BROWSER'])
+# browser = BrowserService('/car/service/src/browser/.hub', '/car/service/src/browser/.browser')
