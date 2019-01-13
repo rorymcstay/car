@@ -1,9 +1,11 @@
+import hashlib
 import logging as LOG
 
 import pymongo
 import os
 import json
 from bson import json_util, ObjectId
+
 
 from pymongo.errors import ConnectionFailure
 
@@ -34,14 +36,23 @@ class MongoService:
         :param car:
         :return:
         """
-        car._id = ObjectId(car.adDetails.url)
-        car_before = self.cars.find({"_id": car._id})
-        if car_before.count() == 0:
+        id = hashlib.sha224(car['adDetails']['url']).hexdigest()
+        id = id[:12]
+        car['_id'] = ObjectId(id)
+        car_search = self.cars.find({"_id": car['_id']})
+        if car_search.count() == 0:
             x = self.cars.insert_one(car)
         else:
-            car.adDetails.previousPrices = car_before.adDetails.previousPrices.append(car_before.adDetails.price)
-            x = self.cars.update_one({'_id':car._id}, car)
-        LOG.info("Request to write %s %s to database returned %s", car.adDetails.url, x.inserted_id,x.acknowledged)
+            car_before_list = []
+            for i in car_search:
+                car_before_list.append(i)
+            car_before = car_before_list[0]
+            try:
+                car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(car_before['adDetails']['price'])
+            except KeyError:
+                car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
+            x = self.cars.update_one({'_id':car['_id']}, car)
+        LOG.info("Request to write %s %s to database returned %s", car['adDetails']['url'], x.inserted_id, x.acknowledged)
         return
 
     def read(self, query):

@@ -1,6 +1,13 @@
 import threading
 import logging as LOG
-from car.market.src.crawling.WebCrawler import WebCrawler
+import traceback
+from telnetlib import EC
+
+from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+
+from car.market.src.crawling.WebCrawler import WebCrawler, ExcludedResultNotifier, EndOfQueueNotification
 from car.market.src.mongo_service.MongoService import MongoService
 import logging
 
@@ -50,28 +57,26 @@ class Market:
         x = 0
         while self.busy:
             LOG.info("Page:%s", str(x))
-            self.crawler.load_queue()
             LOG.debug("Queue length %s", self.crawler)
-            for i in range(len(self.crawler.queue)):
-                try:
-                    self.crawler.load_queue()
-                    if self.crawler.queue == 0:
-                        self.crawler.driver.forward()
-                        self.crawler.load_queue()
-                    result = self.crawler.queue[i]
-                except IndexError:
-                    LOG.error("Couldn't load queue properly")
-                    self.crawler.driver.forward()
-                    try:
-                        self.crawler.load_queue()
-                        result = self.crawler.queue[i]
-                    except:
-                        self.crawler.return_to_last_page()
-                        self.crawler.load_queue()
+
+            for i in self.crawler.get_queue_length():
                 rawCars = False
                 # Check if any of exclusion items are contained within the next attempt
-                if all(exclude not in result.text for exclude in self.result_exclude):
+
+                try:
+                    result = self.crawler.get_queue_member(i, self.result_exclude)
                     rawCars = self.crawler.get_result(result, 120)
+                except ExcludedResultNotifier:
+                    pass
+                except EndOfQueueNotification:
+                    break
+                except StaleElementReferenceException:
+                    self.crawler.return_to_last_page()
+                    pass
+                except NoSuchElementException:
+                    LOG.error("Could not find element")
+                    self.crawler.return_to_last_page()
+                    pass
                 if rawCars is not False:
                     LOG.debug('Got raw car from %s', self.crawler.driver.current_url)
                     for rawCar in rawCars:
@@ -81,12 +86,13 @@ class Market:
                             self.service.insert(car)
                             # TODO handle fails when saving to the database in MongoService
                             LOG.info('Saved result from %s', self.crawler.driver.current_url)
-                            return
                         except Exception, e:
                             # TODO move error handling to respective services
                             LOG.warn('failed result from %s \n %s', self.crawler.driver.current_url, e.message)
+                            traceback.print_exc()
                             pass
             self.crawler.next_page(200)
+
             x = x + 1
 
     def start(self):

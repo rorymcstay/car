@@ -1,6 +1,8 @@
 import json
 import logging as LOG
 import os
+import traceback
+
 from bs4 import BeautifulSoup
 import selenium.webdriver as webdriver
 from selenium.common.exceptions import (TimeoutException,
@@ -17,6 +19,18 @@ from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 
+class ExcludedResultNotifier(Exception):
+    pass
+
+class PageOutOfRange(Exception):
+    pass
+
+class EndOfQueueNotification(Exception):
+    pass
+
+class PageLoadedError(Exception):
+    pass
+
 class WebCrawler:
 
     def __init__(self, market, remote=False):
@@ -27,10 +41,8 @@ class WebCrawler:
         LOG.getLogger('WebCrawler %s' % market.name)
         self.Market = market
         self.number_of_pages = None
-        self.queue = None
-        self.page = 0
-        url = market.browser
-        # determining location of driver
+        self.latest_page = self.Market.home
+# determining location of driver
         if remote is False:
             # local driver
             self.driver = webdriver.Chrome()
@@ -41,6 +53,7 @@ class WebCrawler:
             self.chrome_options.add_argument(arguments)
             LOG.info('Local driver initiated for %s', self.Market.name)
         else:
+            url = market.browser
             LOG.debug("Starting remote driver for %s", market.name)
             options = Options()
             options.add_argument("--headless")
@@ -87,20 +100,19 @@ class WebCrawler:
         :param timeout:
         :return:
         """
-        if all(partial in self.driver.current_url for partial in self.Market.home.split('/')):
+        if self.driver.current_url == self.latest_page:
             return
         else:
             try:
-                self.driver.back()
-                LOG.debug('Navigating back to results at: %s', self.driver.current_url)
-                element_present = EC.presence_of_all_elements_located((selector, wait_for))
-                WebDriverWait(self.driver, 10).until(element_present)
-
+                self.return_to_last_page()
             except NoSuchElementException:
                 LOG.warn("Expected element not found, refreshing page in %s seconds", timeout)
                 WebDriverWait(timeout)
                 self.driver.refresh()
             except TimeoutException:
+                if self.driver.current_url == u'data':
+                    self.driver.get(self.latest_page)
+                    return
                 LOG.warn("Expected element not found, refreshing page in %s seconds")
                 self.driver.refresh()
     #     check to see if were on a results page
@@ -110,6 +122,7 @@ class WebCrawler:
     def safely_click(self, item, wait_for, selector, timeout, attempt=0):
         """
         identifies xpath and css path to button. Attempts
+        This function handles cases where the click is intercepted or the webpage did not load as expected
         :param attempt:
         :param selector:
         :param wait_for:
@@ -121,12 +134,11 @@ class WebCrawler:
             try:
                 item.click()
                 element_present = EC.presence_of_all_elements_located((selector, wait_for))
-                WebDriverWait(self.driver, 10).until(element_present)
+                WebDriverWait(self.driver, int(os.environ['CLICK_TIMEOUT'])).until(element_present)
                 return True
 
             except ElementClickInterceptedException:
                 attempt = attempt + 1
-                # click unsuccesful waiting to refresh and try agin
                 LOG.error("%s click on button was intercepted, waiting %s s \n Message was : %s",
                           self.Market.name,
                           str(timeout),
@@ -136,49 +148,57 @@ class WebCrawler:
                 self.driver.refresh()
                 LOG.warn("trying button again")
                 self.safely_click(item, wait_for, selector, timeout, attempt)
-
-            except StaleElementReferenceException:
-                attempt = attempt + 1
-                # click unsuccesful waiting to refresh and try agin
-                LOG.error("Failed to click on the button waiting %s s, refreshing page and trying again", str(timeout))
-                WebDriverWait(self.driver, timeout)
-                LOG.warn("Refreshing page")
-                self.driver.refresh()
-                LOG.warn("trying button again")
-                self.safely_click(item, wait_for, selector, timeout, attempt)
-
-            except NoSuchElementException:
-                # click succesful but element to wait for is not found. refreshing page and ending.
-                LOG.warn("Expected element not found, refreshing")
-                WebDriverWait(timeout)
-                self.driver.refresh()
             except TimeoutException:
                 LOG.warn("%s did not load as expected", self.driver.current_url)
                 return True
         return False
 
     def next_page(self, timeout):
-        wait_for = self.Market.result_css
         try:
-            next_button = self.driver.find_element_by_xpath(self.Market.next_page_xpath)
+            wait_for = self.Market.result_css
             LOG.debug("Have next button")
-            self.safely_click(next_button, wait_for, By.CSS_SELECTOR, 120)
-            self.page = self.page + 1
-        except TimeoutException:
-            LOG.error("Could not get next page of results: %s ", TimeoutException.message)
-            WebDriverWait(timeout)
-            self.driver.refresh()
+            button = self.get_button(self.Market.next_page_xpath, self.driver.find_element_by_xpath)
+            self.safely_click(button,
+                              wait_for,
+                              By.CSS_SELECTOR,
+                              timeout)
+            self.latest_page = self.driver.current_url
+        except NoSuchElementException, e:
+            LOG.error("Error going to the next page: \n  %s", e.message)
+            traceback.print_exc()
+            self.return_to_last_page()
+            self.next_page(timeout)
 
-    def load_queue(self):
+    def get_queue_length(self):
         """
         creates an array of web elements to process
         :return:
         """
         try:
-            self.queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
+            queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
         except Exception:
-            LOG.error('Failed to load queue\n Message was: %s', Exception.message)
-            return
+            LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, Exception.message)
+            return range(0)
+        return range(len(queue))
+
+    def get_queue_member(self, i, ignore, attempt=0):
+        while attempt < int(os.environ['MAX_GET_RESULT_ATTEMPT']):
+            attempt = attempt + 1
+            if self.latest_page is not self.driver.current_url:
+                self.return_to_last_page()
+            try:
+                queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
+                item = queue[i]
+            except IndexError:
+                raise EndOfQueueNotification()
+            except NoSuchElementException, e:
+                item = self.get_queue_member(i, ignore, attempt)
+            if all(exclude not in item.text for exclude in ignore):
+                return item
+            else:
+                raise ExcludedResultNotifier()
+        LOG.error("Couldn't get queue member")
+        raise NoSuchElementException
 
     def get_result(self, result, timeout):
         """
@@ -194,12 +214,20 @@ class WebCrawler:
             return result
         return False
 
+    def result_page(self):
+        if all(chunk in self.driver.current_url for chunk in self.Market.home):
+            return True
+        else:
+            return False
+
+    def get_button(self, path, selector_method):
+        return selector_method(path)
+
     def return_to_last_page(self):
-        self.driver.get(self.Market.home)
-        last_page = self.page
-        page = 0
-        while page < last_page:
-            page = page + 1
-            self.next_page(30)
-        LOG.info("Reloaded last page of results")
-        return
+        try:
+            self.driver.get(self.latest_page)
+            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.Market.result_css))
+            WebDriverWait(self.driver, int(os.environ['RETURN_TIMEOUT'])).until(element_present)
+        except TimeoutException:
+            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s"
+                     % (self.driver.current_url, self.Market.result_css))

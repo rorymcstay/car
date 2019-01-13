@@ -14,6 +14,8 @@ class Command(FlaskView):
 
     @route('/add_market/<string:name>/<int:remote>/<string:make>/<string:model>', methods=['PUT'])
     def make_market_specific(self, name, make, model):
+        if name in markets.keys():
+            return "Market name is taken"
         market_definition = request.get_json()
         exclude = str(market_definition['result_exclude']).split(',')
         service.save_market_details(json.loads(market_definition))
@@ -33,9 +35,13 @@ class Command(FlaskView):
 
     @route('/add_market/<string:name>/<int:remote>', methods=['PUT'])
     def make_market(self, name, remote):
+        if name in markets.keys():
+            return "Market name is taken"
         market_definition = request.get_json()
         if remote is 0:
-            market_definition['remote'] = None
+            remote = False
+        else:
+            remote = str(market_definition['remote'])
         exclude = str(market_definition['result_exclude']).split(',')
         markets[str(name)] = Market(name=str(name),
                                     result_css=str(market_definition['result_css']),
@@ -47,8 +53,8 @@ class Command(FlaskView):
                                     router=routes["_" + name + "_router"](make=None,
                                                                           model=None,
                                                                           sort=str(market_definition["sort"])),
-                                    remote=str(market_definition['remote']))
-        return jsonify(markets['name'])
+                                    remote=remote)
+        return "ok"
 
     @route('/start/<string:name>', methods=['PUT'])
     def start(self, name):

@@ -19,7 +19,7 @@ def index_of_list_where_key_equals(attribute, json, list_name, parent):
     :return: index of where the attribute passes in list
     """
     pos = next((index for (index, d) in enumerate(json[list_name])
-                if d[parent] == attribute), None)
+                if d[parent] == attribute), 0)
     return pos
 
 
