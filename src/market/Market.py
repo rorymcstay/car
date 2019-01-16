@@ -3,13 +3,13 @@ import threading
 import logging as LOG
 import traceback
 
-from selenium.common.exceptions import StaleElementReferenceException, NoSuchElementException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
-from car.market.src.crawling.WebCrawler import WebCrawler
-from car.market.src.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, QueueServicingError, ResultCollectionFailure
-from car.market.src.mongo_service.MongoService import MongoService
+from car.src.market import WebCrawler
+from car.src.market import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
+from car.src.market import MongoService
 import logging
 from selenium.webdriver.support import expected_conditions as EC
 

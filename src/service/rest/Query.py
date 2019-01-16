@@ -4,9 +4,9 @@ import yaml
 from bson import json_util
 from flask import request, Blueprint, json
 from flask_classy import FlaskView, route
-from car.market.src.mongo_service.QueryConstructor import QueryConstructor
-from car.flask_helper.headers import JSON
-from car.market.src.mongo_service.MongoService import MongoService
+from car.src.market import QueryConstructor
+from car.src.service.rest.flask_helper import JSON
+from car.src.market import MongoService
 
 query = Blueprint('query', __name__,)
 service = MongoService()

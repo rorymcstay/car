@@ -1,6 +1,6 @@
 from unittest import TestCase
-from car.service.src.rest.Command import Command
-from car.market.src.marketplaces import donedeal
+from car.src.service.service import Command
+from car.src.market import donedeal
 
 
 class TestCommand(TestCase):

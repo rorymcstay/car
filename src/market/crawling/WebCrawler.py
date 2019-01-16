@@ -17,7 +17,7 @@ from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from car.market.src.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, QueueServicingError, \
+from car.src.market import ExcludedResultNotifier, EndOfQueueNotification, QueueServicingError, \
     ResultCollectionFailure
 
 

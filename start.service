@@ -2,8 +2,8 @@ import os
 import traceback
 import logging
 from flask import Flask, request
-from car.service.src.rest.Command import Command
-from car.service.src.rest.Query import Query
+from car.src.service.service import Command
+from car.src.service.service import Query
 
 
 logging.basicConfig(level=logging.DEBUG)

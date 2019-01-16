@@ -1,8 +1,7 @@
-import json
 import os
 
 from flask_classy import FlaskView, route
-from car.service.src.browser.BrowserService import browser_service
+from car.src.service.service import browser_service
 from flask import request, Flask
 import requests
 

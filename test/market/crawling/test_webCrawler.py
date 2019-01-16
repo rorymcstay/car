@@ -1,8 +1,8 @@
 from unittest import TestCase, skip
 from selenium.webdriver.support.wait import WebDriverWait
 from car.tools.DoneDealFeed import market as DoneDeal
-from car.market.test.crawling.resources.donedeal_market import next_page_expectation as DoneDealExpectation
-from car.market.test.crawling.resources.donedeal_car_raw import raw_car_expectation as DoneDealRawCar
+from car.test.resources import next_page_expectation as DoneDealExpectation
+from car.test.resources.donedeal_car_raw import raw_car_expectation as DoneDealRawCar
 
 class TestWebCrawler(TestCase):
     @skip
@@ -39,6 +39,7 @@ class TestWebCrawler(TestCase):
 
     def test_markets_get_raw_car(self):
         self.test_get_raw_car(DoneDeal, "https://www.donedeal.co.uk/cars-for-sale/toyota-corolla/20804176", DoneDealRawCar)
+
 
 
 
