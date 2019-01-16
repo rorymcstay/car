@@ -9,3 +9,4 @@ beautifulsoup4
 elasticsearch
 pyyaml
 docker
+dotenv

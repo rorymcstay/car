@@ -1,13 +1,10 @@
 import hashlib
 import logging as LOG
-
 import pymongo
 import os
 import json
 from bson import json_util, ObjectId
 
-
-from pymongo.errors import ConnectionFailure
 
 
 class MongoService:
@@ -19,8 +16,11 @@ class MongoService:
 
     in a terminal
     """
+
     def __init__(self):
-        self.client = pymongo.MongoClient(os.getenv('MONGO_URL', '0.0.0.0:27017'), username=os.getenv('USERNAME', 'root'), password=os.getenv('PASSWORD', 'root'))
+        self.client = pymongo.MongoClient(host=os.getenv('MONGO_URL', '0.0.0.0:27017'),
+                                          username=os.getenv('USERNAME', 'root'),
+                                          password=os.getenv('PASSWORD', 'root'))
         self.db = self.client[os.getenv('MONGO_DATABASE', 'my_database')]
         self.cars = self.db[os.getenv("MONGO_COLLECTION", 'cars')]
         self.market_details_collection = self.db['marketDetails']
@@ -48,11 +48,13 @@ class MongoService:
                 car_before_list.append(i)
             car_before = car_before_list[0]
             try:
-                car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(car_before['adDetails']['price'])
-            except KeyError:
+                car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(
+                    car_before['adDetails']['price'])
+            except KeyError, AttributeError:
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
-            x = self.cars.update_one({'_id':car['_id']}, car)
-        LOG.info("Request to write %s %s to database returned %s", car['adDetails']['url'], x.inserted_id, x.acknowledged)
+            x = self.cars.replace_one({'_id': car['_id']}, car)
+        LOG.info("Request to write %s to database returned %s", car['adDetails']['url'],
+                 x.acknowledged)
         return
 
     def read(self, query):
@@ -80,5 +82,3 @@ class MongoService:
 
 
 service = MongoService()
-
-

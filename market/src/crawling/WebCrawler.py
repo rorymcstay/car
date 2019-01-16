@@ -1,14 +1,14 @@
 import json
 import logging as LOG
 import os
+import time
 import traceback
 
 from bs4 import BeautifulSoup
 import selenium.webdriver as webdriver
 from selenium.common.exceptions import (TimeoutException,
                                         StaleElementReferenceException,
-                                        ElementClickInterceptedException,
-                                        NoSuchElementException)
+                                        NoSuchElementException, WebDriverException)
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,19 +17,9 @@ from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from car.market.src.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, QueueServicingError, \
+    ResultCollectionFailure
 
-
-class ExcludedResultNotifier(Exception):
-    pass
-
-class PageOutOfRange(Exception):
-    pass
-
-class EndOfQueueNotification(Exception):
-    pass
-
-class PageLoadedError(Exception):
-    pass
 
 class WebCrawler:
 
@@ -41,8 +31,8 @@ class WebCrawler:
         LOG.getLogger('WebCrawler %s' % market.name)
         self.Market = market
         self.number_of_pages = None
-        self.latest_page = self.Market.home
-# determining location of driver
+        self.last_result = self.Market.home
+        # determining location of driver
         if remote is False:
             # local driver
             self.driver = webdriver.Chrome()
@@ -64,110 +54,65 @@ class WebCrawler:
             # TODO Cant establish connection - parse loggs for connection
             # Connection timingi out
             LOG.info('Remote driver initiated for %s running on %s', self.Market.name, url)
+        # 1520 - couldn't find next button
+        self.driver.set_window_size(1420, 900)
 
-    def get_raw_car(self):
+    def get_raw_car(self, source=None):
         """
         attempts to get car from current page source, returns to the previous set of results in which it came
         :return:
         """
-        source = self.driver.page_source
+        if source is not None:
+            source = source
+        else:
+            source = self.driver.page_source
         soup = BeautifulSoup(source, 'html.parser')
 
         out = []
-        for script in soup.find_all('script'):
-            if self.Market.json_identifier in script.text:
-                tree = JavascriptParser().parse(script.text)
-                script_objects = next(node.right for node in nodevisitor.visit(tree)
-                                      if (isinstance(node, ast.Assign) and
-                                          node.left.to_ecma() == self.Market.json_identifier))
-                raw_car = json.loads(script_objects.to_ecma())
-                LOG.debug("Found raw car json object %s ", self.Market.json_identifier)
-                out.append(raw_car)
-
-        if len(out) == 0:
-            LOG.error("Could not find json_identifier = %s at %s",
-                      self.Market.json_identifier,
-                      self.driver.current_url)
-            return False
+        try:
+            for script in soup.find_all('script'):
+                if self.Market.json_identifier in script.text:
+                    tree = JavascriptParser().parse(script.text)
+                    script_objects = next(node.right for node in nodevisitor.visit(tree)
+                                          if (isinstance(node, ast.Assign) and
+                                              node.left.to_ecma() == self.Market.json_identifier))
+                    raw_car = json.loads(script_objects.to_ecma())
+                    LOG.debug("Found raw car json object %s ", self.Market.json_identifier)
+                    out.append(raw_car)
+            if len(out) == 0:
+                ResultCollectionFailure(self.driver.current_url, "Nothing found here")
+                LOG.error("Could not find json_identifier = %s at %s",
+                          self.Market.json_identifier,
+                          self.driver.current_url)
+                return False
+        except Exception, e:
+            raise ResultCollectionFailure(self.driver.current_url, None, e)
         return out
 
-    def safely_go_back(self, wait_for, selector, timeout):
-        """
-        This navigates back to the previous page and ensures the presence of an element
-
-        :param selector: eg. By.CSS_SELECTOR
-        :param wait_for: the element to be present.
-        :param timeout:
-        :return:
-        """
-        if self.driver.current_url == self.latest_page:
-            return
-        else:
-            try:
-                self.return_to_last_page()
-            except NoSuchElementException:
-                LOG.warn("Expected element not found, refreshing page in %s seconds", timeout)
-                WebDriverWait(timeout)
-                self.driver.refresh()
-            except TimeoutException:
-                if self.driver.current_url == u'data':
-                    self.driver.get(self.latest_page)
-                    return
-                LOG.warn("Expected element not found, refreshing page in %s seconds")
-                self.driver.refresh()
-    #     check to see if were on a results page
-        if self.driver.current_url is None:
-            self.driver.forward()
-
-    def safely_click(self, item, wait_for, selector, timeout, attempt=0):
+    def safely_click(self, item, wait_for, selector, timeout=3):
         """
         identifies xpath and css path to button. Attempts
         This function handles cases where the click is intercepted or the webpage did not load as expected
-        :param attempt:
         :param selector:
         :param wait_for:
-        :param timeout:
         :param item:
         :return:
         """
-        if attempt < int(os.environ['MAX_CLICK_ATTEMPTS']):
-            try:
-                item.click()
-                element_present = EC.presence_of_all_elements_located((selector, wait_for))
-                WebDriverWait(self.driver, int(os.environ['CLICK_TIMEOUT'])).until(element_present)
-                return True
 
-            except ElementClickInterceptedException:
-                attempt = attempt + 1
-                LOG.error("%s click on button was intercepted, waiting %s s \n Message was : %s",
-                          self.Market.name,
-                          str(timeout),
-                          ElementClickInterceptedException.message)
-                WebDriverWait(self.driver, timeout)
-                LOG.warn("Refreshing page")
-                self.driver.refresh()
-                LOG.warn("trying button again")
-                self.safely_click(item, wait_for, selector, timeout, attempt)
-            except TimeoutException:
-                LOG.warn("%s did not load as expected", self.driver.current_url)
-                return True
-        return False
-
-    def next_page(self, timeout):
         try:
-            wait_for = self.Market.result_css
-            LOG.debug("Have next button")
-            button = self.get_button(self.Market.next_page_xpath, self.driver.find_element_by_xpath)
-            self.safely_click(button,
-                              wait_for,
-                              By.CSS_SELECTOR,
-                              timeout)
-            self.latest_page = self.driver.current_url
-        except NoSuchElementException, e:
-            LOG.error("Error going to the next page: \n  %s", e.message)
+            item.click()
+            element_present = EC.presence_of_all_elements_located((selector, wait_for))
+            WebDriverWait(self.driver, timeout).until(element_present)
+            return True
+        except TimeoutException:
+            LOG.warn("%s did not load as expected", self.driver.current_url)
+            return True
+        except StaleElementReferenceException, e:
+            LOG.warn("couldn't click on %s: \n  %s", item.text, e.message)
             traceback.print_exc()
-            self.return_to_last_page()
-            self.next_page(timeout)
+            return False
+        except WebDriverException:
+            return False
 
     def get_queue_length(self):
         """
@@ -176,43 +121,55 @@ class WebCrawler:
         """
         try:
             queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
-        except Exception:
+        except NoSuchElementException, e:
             LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, Exception.message)
-            return range(0)
+            raise QueueServicingError(self.driver.current_url, exception=e, attempt="Queue length",)
         return range(len(queue))
 
     def get_queue_member(self, i, ignore, attempt=0):
-        while attempt < int(os.environ['MAX_GET_RESULT_ATTEMPT']):
-            attempt = attempt + 1
-            if self.latest_page is not self.driver.current_url:
-                self.return_to_last_page()
-            try:
-                queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
-                item = queue[i]
-            except IndexError:
-                raise EndOfQueueNotification()
-            except NoSuchElementException, e:
-                item = self.get_queue_member(i, ignore, attempt)
-            if all(exclude not in item.text for exclude in ignore):
-                return item
+        if attempt < int(os.environ['MAX_GET_RESULT_ATTEMPT']):
+            if self.result_page():
+                try:
+                    queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
+                    item = queue[i]
+                    if all(exclude not in item.text for exclude in ignore):
+                        return item
+                    else:
+                        raise ExcludedResultNotifier()
+                except IndexError, e:
+                    raise EndOfQueueNotification(i, e, attempt)
+                except NoSuchElementException, e:
+                    self.latest_page()
+                    raise QueueServicingError(self.driver.current_url, "get_queue_member returned false", e)
             else:
-                raise ExcludedResultNotifier()
-        LOG.error("Couldn't get queue member")
-        raise NoSuchElementException
+                LOG.error("Queue member called outside of context")
+                raise QueueServicingError(attempt=attempt,
+                                          url=self.driver.current_url,
+                                          reason="Queue member called outside of context",
+                                          exception="result_page() was false")
 
-    def get_result(self, result, timeout):
+        else:
+            raise QueueServicingError(attempt=attempt,
+                                      url=self.driver.current_url,
+                                      reason="Reached Maximum attempts",
+                                      exception=None)
+
+    def get_result(self, result):
         """
         This clicks on a web element and gets raw car then exits back to the page it was once on.
-        :param timeout:
         :param result:
         :return:
         """
-        click = self.safely_click(result, self.Market.wait_for_car, By.CSS_SELECTOR, timeout, 0)
+        click = self.safely_click(result, self.Market.wait_for_car, By.CSS_SELECTOR)
         if click:
-            result = self.get_raw_car()
-            self.safely_go_back(self.Market.result_css, By.CSS_SELECTOR, timeout)
-            return result
-        return False
+            try:
+                result = self.get_raw_car()
+                url = self.driver.current_url
+                return {'result': result, 'url': url}
+            except ResultCollectionFailure, e:
+                raise e
+        else:
+            raise ResultCollectionFailure(self.driver.current_url, "Error clicking on result", "click returned false")
 
     def result_page(self):
         if all(chunk in self.driver.current_url for chunk in self.Market.home):
@@ -220,14 +177,38 @@ class WebCrawler:
         else:
             return False
 
-    def get_button(self, path, selector_method):
-        return selector_method(path)
-
-    def return_to_last_page(self):
+    def latest_page(self):
         try:
-            self.driver.get(self.latest_page)
+            self.driver.get(self.last_result)
             element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.Market.result_css))
             WebDriverWait(self.driver, int(os.environ['RETURN_TIMEOUT'])).until(element_present)
+            return True
         except TimeoutException:
-            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s"
-                     % (self.driver.current_url, self.Market.result_css))
+            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s", self.driver.current_url, self.Market.result_css)
+            return True
+
+    def next_page(self, attempts=0):
+        if attempts < int(os.environ['MAX_CLICK_ATTEMPTS']) and self.result_page():
+            origin_called = self.driver.current_url
+            try:
+                button = self.driver.find_element_by_xpath(self.Market.next_page_xpath)
+            except NoSuchElementException, e:
+                LOG.error("Could not find next button %s", e.message)
+                self.latest_page()
+                time.sleep(30)
+                return self.next_page(attempts=attempts)
+            click = self.safely_click(button, self.Market.result_css, By.CSS_SELECTOR, 30)
+            self.last_result = self.driver.current_url
+        else:
+            return False
+
+    def retrace_steps(self, x):
+        self.driver.get(self.Market.home)
+        WebDriverWait(self.driver, 2)
+        page = 1
+        while page < x:
+            self.next_page()
+            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
+            page = page + 1
+
+

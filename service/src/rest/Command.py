@@ -53,6 +53,7 @@ class Command(FlaskView):
                                     router=routes["_" + name + "_router"](make=None,
                                                                           model=None,
                                                                           sort=str(market_definition["sort"])),
+                                    next_button_text=market_definition['next_button_text'],
                                     remote=remote)
         return "ok"
 
