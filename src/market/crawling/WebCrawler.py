@@ -181,7 +181,7 @@ class WebCrawler:
         try:
             self.driver.get(self.last_result)
             element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.Market.result_css))
-            WebDriverWait(self.driver, int(os.environ['RETURN_TIMEOUT'])).until(element_present)
+            WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
             LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s", self.driver.current_url, self.Market.result_css)
