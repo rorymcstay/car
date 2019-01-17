@@ -87,5 +87,5 @@ class BrowserService:
         return None
 
 print os.getcwd()
-browser_service = BrowserService(os.environ['HUB'], os.environ['BROWSER'])
+browser_container = BrowserService(os.environ['HUB'], os.environ['BROWSER'])
 # browser = BrowserService('/car/service/src/browser/.hub', '/car/service/src/browser/.browser')

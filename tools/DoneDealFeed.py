@@ -1,8 +1,8 @@
 import os
 
-from car.src.market import Market
-from car.src.market import routes
-from car.src.market import mappers
+from car.src.market.Market import Market
+from car.src.market.crawling.Routers import routes
+from car.src.market.mapping.Mappers import mappers
 
 os.environ["MAX_CLICK_ATTEMPTS"] = "5"
 os.environ["MAX_GET_RESULT_ATTEMPT"] = "5"
