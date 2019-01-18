@@ -137,6 +137,13 @@ class Market:
         browser['browser'].kill()
         return
 
+    def start(self):
+        self.busy = True
+        thread = threading.Thread(target=self.collect_cars, args=(), name='%s_simple' % self.name)
+        thread.daemon = True
+        thread.start()
+        return "ok"
+
     def set_results(self, list):
         self.results = list
 

@@ -2,7 +2,8 @@ import os
 import traceback
 import logging
 from flask import Flask, request
-from car.src.main.service.rest import Command, Query
+from car.src.main.service.rest.Command import Command
+from car.src.main.service.rest.Query import Query
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -17,15 +18,12 @@ def internal_error(exception):
     return traceback.format_exc()
 
 
-
 print 'car-market-app: routes made'
 
 print app.url_map
 
-try:
-    app.run(host=os.environ['APP_HOST'], port=os.environ['APP_PORT'])
-except KeyboardInterrupt:
-    func = request.environ.get('werkzeug.server.shutdown')
-    func()
-    raise
+
+
+app.run()
+
 
