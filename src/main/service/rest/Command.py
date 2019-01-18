@@ -1,10 +1,10 @@
 import json
 from flask import request
 from flask_classy import FlaskView, route
-from car.src.market.Market import Market
-from car.src.service.mongo_service.MongoService import service
-from car.src.market.crawling.Routers import routes
-from car.src.market.mapping.Mappers import mappers
+from car.src.main.market.Market import Market
+from car.src.main.service.mongo_service.MongoService import service
+from car.src.main.market.crawling.Routers import routes
+from car.src.main.market.mapping.Mappers import mappers
 
 markets = {}
 

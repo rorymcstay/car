@@ -2,15 +2,13 @@ import os
 import traceback
 import logging
 from flask import Flask, request
-from car.src.service.rest import Command
-from car.src.service.rest import Query
-
+from car.src.main.service.rest import Command, Query
 
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 Command.register(app)
-
+Query.register(app)
 
 @app.errorhandler(500)
 def internal_error(exception):
@@ -19,7 +17,7 @@ def internal_error(exception):
     return traceback.format_exc()
 
 
-Query.register(app)
+
 print 'car-market-app: routes made'
 
 print app.url_map

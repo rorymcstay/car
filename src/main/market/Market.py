@@ -1,15 +1,18 @@
 import os
 import threading
 import logging as LOG
+import time
 import traceback
+import logging
+
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from car.src.market.crawling.WebCrawler import WebCrawler
-from car.src.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
-from car.src.service.mongo_service.MongoService import MongoService
-import logging
 from selenium.webdriver.support import expected_conditions as EC
+from car.src.main.market.crawling.WebCrawler import WebCrawler
+from car.src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
+from car.src.main.service.mongo_service.MongoService import MongoService
+from car.src.main.market.browser.Browser import BrowserService
 
 
 class Market:
@@ -19,7 +22,11 @@ class Market:
                  result_exclude,
                  wait_for_car,
                  json_identifier,
-                 next_page_xpath, mapper, router, next_button_text, remote=False):
+                 next_page_xpath, result_stub, mapper, router, next_button_text, remote=False):
+
+        self.threads = []
+        self.result_stub = result_stub
+        self.results = None
         logging.getLogger('Market: %s' % name)
         """
         :type remote: BrowserService
@@ -49,7 +56,7 @@ class Market:
 
 
 
-    def collect_cars(self):
+    def collect_cars(self, single= None):
         """
         Routine for collecting cars. Runs whilst self.market.busy is true. It handles exceptions defined in
         crawling.Exceptions. It uses MongoService to  persist cars to the mongo database in a docker container.
@@ -58,8 +65,11 @@ class Market:
         while self.busy:
             LOG.info("Page:%s", str(x))
             LOG.debug("Queue length %s", self.crawler)
-
-            for i in self.crawler.get_queue_length(): # TODO Handle webdriver exceptions within this block
+            if single is None:
+                queue = self.crawler.get_queue_length()
+            else:
+                queue = [single]
+            for i in queue: # TODO Handle webdriver exceptions within this block
                 rawCars = False
                 try:
                     result = self.crawler.get_queue_member(i, self.result_exclude)
@@ -103,18 +113,56 @@ class Market:
                 self.crawler.retrace_steps(x)
             x = x + 1
 
-    def start(self):
+    def start_worker(self, queue_member, timeout):
         """
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
         :return:
         """
-        self.crawler.driver.get(self.home)
-        self.crawler.latest_page = self.home
+        browser = BrowserService(os.environ['HUB'], os.environ['BROWSER']).new_service("donedeal_%s" % queue_member)
+        mongo = MongoService()
+        worker = WebCrawler(self, remote=browser)
+        worker.driver.get(self.home)
+        while self.busy:
+            url = self.get_result(queue_member)
+            worker.driver.get(url)
+            time.sleep(timeout)
+            rawCar = worker.get_raw_car()
+            if rawCar is False:
+                LOG.warn("%s_%s missed their car - %s", self.name, queue_member, url)
+            else:
+                mongo.insert(rawCar)
+                LOG.info("%s_%s saved their car - %s", self.name, queue_member, url)
+
+        browser['hub'].kill()
+        browser['browser'].kill()
+        return
+
+    def set_results(self, list):
+        self.results = list
+
+    def get_result(self, item):
+        return self.results[item]
+
+    def start_parrallel(self):
         self.busy = True
-        thread = threading.Thread(target=self.collect_cars(), args=())
-        thread.daemon = True
-        thread.start()
-        return "started"
+        self.threads = []
+        self.crawler.driver.get(self.home)
+        queue = self.crawler.get_queue_length()
+        self.set_results(self.crawler.get_result_array())
+        for i in queue:
+            thread = threading.Thread(target=self.start_worker, args=(i, 3), name='%s_%s' % (self.name, i))
+            thread.daemon = True
+            self.threads.append(thread)
+
+        for thread in self.threads:
+            thread.start()
+
+        self.crawler.driver.get(self.home)
+        while self.busy:
+            time.sleep(1)
+            self.set_results(self.crawler.get_result_array())
+            time.sleep(5)
+            self.crawler.next_page()
 
     def resume(self):
         self.busy = True

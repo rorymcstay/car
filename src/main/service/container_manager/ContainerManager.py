@@ -1,7 +1,7 @@
 import os
 
 from flask_classy import FlaskView, route
-from car.src.market.browser.Browser import browser_container
+from car.src.main.market.browser.Browser import browser_container
 from flask import request, Flask
 import requests
 

@@ -1,8 +1,8 @@
 import os
 
-from car.src.market.Market import Market
-from car.src.market.crawling.Routers import routes
-from car.src.market.mapping.Mappers import mappers
+from car.src.main.market import Market
+from car.src.main.market import routes
+from car.src.main.market.mapping import mappers
 
 os.environ["MAX_CLICK_ATTEMPTS"] = "5"
 os.environ["MAX_GET_RESULT_ATTEMPT"] = "5"
@@ -25,6 +25,11 @@ os.environ["MONGO_DATABASE"] = "mydatabase"
 os.environ["USERNAME"] = "root"
 os.environ["PASSWORD"] = "root"
 os.environ["PASSWORD"] = "20"
+os.environ['HUB'] = '../src/market/browser/.hub'
+os.environ['BROWSER'] = '../src/market/browser/.browser'
+
+APP_PORT = 5000
+APP_HOST = '0.0.0.0'
 
 market = Market(name='donedeal',
                 result_css=".card__body",
@@ -36,4 +41,7 @@ market = Market(name='donedeal',
                                                   model=None,
                                                   sort="publishdate%20desc"),
                 mapper=mappers['_donedeal_mapper'],
-                next_button_text="Next")
+                next_button_text="Next",
+                result_stub='https://www.donedeal.co.uk/cars-for-sale/')
+
+market.start_parrallel()

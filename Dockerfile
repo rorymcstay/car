@@ -4,10 +4,10 @@ RUN mkdir -p /home/car
 
 WORKDIR /home
 
-COPY src/market ./car/
-COPY src/service/service ./car/
+COPY src/main ./car/
+COPY src/main ./car/
 COPY __init__.py ./car/
-COPY ./requirements.txt ./car/requirements.txt
+COPY requirements.txt ./car/requirements.txt
 COPY start.service ./car/start.service
 
 WORKDIR ./car

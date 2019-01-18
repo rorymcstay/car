@@ -1,10 +1,9 @@
 import json
 import logging as LOG
 import os
+import re
 import time
 import traceback
-
-from bs4 import BeautifulSoup
 import selenium.webdriver as webdriver
 from selenium.common.exceptions import (TimeoutException,
                                         StaleElementReferenceException,
@@ -17,8 +16,11 @@ from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from car.src.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, QueueServicingError, \
-    ResultCollectionFailure
+from car.src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
+                                                     EndOfQueueNotification,
+                                                     QueueServicingError,
+                                                     ResultCollectionFailure)
+from bs4 import BeautifulSoup
 
 
 class WebCrawler:
@@ -123,7 +125,7 @@ class WebCrawler:
             queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
         except NoSuchElementException, e:
             LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, Exception.message)
-            raise QueueServicingError(self.driver.current_url, exception=e, attempt="Queue length",)
+            raise QueueServicingError(self.driver.current_url, exception=e, attempt="Queue length", )
         return range(len(queue))
 
     def get_queue_member(self, i, ignore, attempt=0):
@@ -184,7 +186,8 @@ class WebCrawler:
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s", self.driver.current_url, self.Market.result_css)
+            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s",
+                     self.driver.current_url, self.Market.result_css)
             return True
 
     def next_page(self, attempts=0):
@@ -202,13 +205,18 @@ class WebCrawler:
         else:
             return False
 
+    def get_result_array(self):
+        content = self.driver.page_source
+        cars = []
+        cars.extend(re.findall(r'' + self.Market.result_stub + '[^\"]+', content))
+        return cars
+
     def retrace_steps(self, x):
         self.driver.get(self.Market.home)
         WebDriverWait(self.driver, 2)
         page = 1
         while page < x:
             self.next_page()
-            WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
             page = page + 1
-
-

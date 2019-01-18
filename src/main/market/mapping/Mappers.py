@@ -1,4 +1,4 @@
-from car.src.market.mapping import DoneDeal
+from car.src.main.market.mapping import DoneDeal
 
 
 class Mappers(object):

@@ -45,7 +45,7 @@ class BrowserService:
 
         url = self.get_hub_host(hub)
         if url is None:
-            time.sleep(10)
+            time.sleep(60)
             url = self.get_hub_host(hub)
 
                 # building browser image

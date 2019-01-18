@@ -1,11 +1,7 @@
-import os
-import unittest
 from unittest import TestCase
-from car.src.service.rest import Command
-from car.test.resources.donedeal_market import market as donedeal_market
-from car.src.service.rest.Command import Command
+from car.src.main.service import Command
 
-from flask import request, Flask
+from flask import Flask
 
 app = Flask(__name__)
 Command.register(app)
