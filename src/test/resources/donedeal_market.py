@@ -1,7 +1,7 @@
 import os
-from car.src.main.market import Market
-from car.src.main.market.mapping import mappers
-from car.src.main.market import routes
+from car.src.main.market.Market import Market
+from car.src.main.market.mapping.Mappers import mappers
+from car.src.main.market.crawling.Routers import routes
 
 os.environ["MAX_CLICK_ATTEMPTS"] = "5"
 os.environ["MAX_GET_RESULT_ATTEMPT"] = "5"
@@ -35,7 +35,8 @@ market = Market(name='donedeal',
                                                   model=None,
                                                   sort="publishdate%20desc"),
                 mapper=mappers['_donedeal_mapper'],
-                next_button_text="Next")
+                next_button_text="Next",
+                result_stub='https://www.donedeal.co.uk/cars-for-sale/')
 
 next_page_expectation = [
     "https://www.donedeal.co.uk/cars?sort=publishdate%20desc&start=28",

@@ -4,9 +4,9 @@ RUN mkdir -p /home/car
 
 WORKDIR /home
 
-COPY src/main ./car/
-COPY src/main ./car/
-COPY __init__.py ./car/
+COPY src/ ./car/
+COPY __init__.py ./car/__init__.py
+
 COPY requirements.txt ./car/requirements.txt
 COPY start.service ./car/start.service
 

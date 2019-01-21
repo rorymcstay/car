@@ -138,11 +138,17 @@ class Market:
         return
 
     def start(self):
+        """
+        Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
+        :return:
+        """
+        self.crawler.driver.get(self.home)
+        self.crawler.latest_page = self.home
         self.busy = True
-        thread = threading.Thread(target=self.collect_cars, args=(), name='%s_simple' % self.name)
+        thread = threading.Thread(target=self.collect_cars(), args=())
         thread.daemon = True
         thread.start()
-        return "ok"
+        return "started"
 
     def set_results(self, list):
         self.results = list

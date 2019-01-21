@@ -12,6 +12,9 @@ class EndOfQueueNotification(Exception):
         self.exception = exception
         self.member = member
 
+class MaxAttemptsReached(Exception):
+    pass
+
 
 class PageLoadedError(Exception):
     pass

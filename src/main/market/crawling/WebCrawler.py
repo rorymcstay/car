@@ -16,11 +16,12 @@ from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from bs4 import BeautifulSoup
 from car.src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                      EndOfQueueNotification,
                                                      QueueServicingError,
-                                                     ResultCollectionFailure)
-from bs4 import BeautifulSoup
+                                                     ResultCollectionFailure,
+                                                     MaxAttemptsReached, PageOutOfRange)
 
 
 class WebCrawler:
@@ -57,7 +58,7 @@ class WebCrawler:
             # Connection timingi out
             LOG.info('Remote driver initiated for %s running on %s', self.Market.name, url)
         # 1520 - couldn't find next button
-        self.driver.set_window_size(1420, 900)
+        self.driver.set_window_size(1120, 900)
 
     def get_raw_car(self, source=None):
         """
@@ -108,7 +109,7 @@ class WebCrawler:
             return True
         except TimeoutException:
             LOG.warn("%s did not load as expected", self.driver.current_url)
-            return True
+            raise PageOutOfRange()
         except StaleElementReferenceException, e:
             LOG.warn("couldn't click on %s: \n  %s", item.text, e.message)
             traceback.print_exc()
@@ -125,7 +126,10 @@ class WebCrawler:
             queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
         except NoSuchElementException, e:
             LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, Exception.message)
-            raise QueueServicingError(self.driver.current_url, exception=e, attempt="Queue length", )
+            raise QueueServicingError(url=self.driver.current_url,
+                                      reason="NoSuchElementException",
+                                      exception=e,
+                                      attempt="Queue length")
         return range(len(queue))
 
     def get_queue_member(self, i, ignore, attempt=0):
@@ -142,14 +146,16 @@ class WebCrawler:
                     raise EndOfQueueNotification(i, e, attempt)
                 except NoSuchElementException, e:
                     self.latest_page()
-                    raise QueueServicingError(self.driver.current_url, "get_queue_member returned false", e)
+                    raise QueueServicingError(attempt=attempt,
+                                              url=self.driver.current_url,
+                                              reason="get_queue_member returned false",
+                                              exception=e)
             else:
                 LOG.error("Queue member called outside of context")
                 raise QueueServicingError(attempt=attempt,
                                           url=self.driver.current_url,
                                           reason="Queue member called outside of context",
                                           exception="result_page() was false")
-
         else:
             raise QueueServicingError(attempt=attempt,
                                       url=self.driver.current_url,
@@ -192,18 +198,36 @@ class WebCrawler:
 
     def next_page(self, attempts=0):
         if attempts < int(os.environ['MAX_CLICK_ATTEMPTS']) and self.result_page():
-            origin_called = self.driver.current_url
             try:
-                button = self.driver.find_element_by_xpath(self.Market.next_page_xpath)
+                button = self.get_next_button()
             except NoSuchElementException, e:
+                attempts = attempts + 1
                 LOG.error("Could not find next button %s", e.message)
                 self.latest_page()
-                time.sleep(30)
-                return self.next_page(attempts=attempts)
-            click = self.safely_click(button, self.Market.result_css, By.CSS_SELECTOR, 30)
-            self.last_result = self.driver.current_url
+                self.next_page(attempts)
+                return
+            try:
+                self.safely_click(button, self.Market.next_page_xpath, By.XPATH, 30)
+                self.update_latest_page(attempts=attempts)
+                return
+            except PageOutOfRange, e:
+                raise e
         else:
-            return False
+            raise MaxAttemptsReached()
+
+    def get_next_button(self, attempts=0):
+        if attempts < os.environ['MAX_CLICK_ATTEMPTS']:
+            attempts = attempts + 1
+            buttons = self.driver.find_elements_by_xpath('//*[@id]')
+            for button in buttons:
+                try:
+                    if button.text.upper() == u'NEXT':
+                        return button
+                except StaleElementReferenceException, e:
+                    pass
+            self.get_next_button(attempts=attempts)
+        else:
+            raise PageOutOfRange()
 
     def get_result_array(self):
         content = self.driver.page_source
@@ -220,3 +244,12 @@ class WebCrawler:
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
             page = page + 1
+
+    def update_latest_page(self, attempts=0):
+        if self.last_result == self.driver.current_url and attempts < os.environ['MAX_CLICK_ATTEMPTS']:
+            attempts = attempts + 1
+            WebDriverWait(self.driver, os.environ['RETURN_TIMEOUT'])
+            self.update_latest_page(attempts=attempts)
+        elif attempts == os.environ['MAX_CLICK_ATTEMPTS']:
+            raise MaxAttemptsReached()
+        self.last_result = self.driver.current_url
