@@ -1,0 +1,12 @@
+from src.main.market.mapping import DoneDeal
+
+
+class Mappers(object):
+    def __init__(self):
+        self._donedeal_mapper = DoneDeal
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+
+mappers = Mappers()

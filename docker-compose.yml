@@ -25,16 +25,16 @@ services:
     networks:
       - app
 
-  car:
-    build: ""
+  car_app:
+    build: "./car_app"
     volumes:
-      - './car:/car'
+      - ./car_app/src:/home/src
     depends_on:
       - mongo
     ports:
       - "5001:5001"
     env_file:
-      - docker.properties.env
+      - car_app/docker.properties.env
     networks:
       - app
 
