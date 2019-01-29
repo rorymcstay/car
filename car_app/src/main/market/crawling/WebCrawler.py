@@ -2,7 +2,7 @@ import json
 import logging as LOG
 import os
 import re
-import time
+from time import time, sleep
 import traceback
 import selenium.webdriver as webdriver
 from selenium.common.exceptions import (TimeoutException,
@@ -90,7 +90,7 @@ class WebCrawler:
                           self.Market.json_identifier,
                           self.driver.current_url)
                 return False
-        except Exception, e:
+        except Exception as e:
             raise ResultCollectionFailure(self.driver.current_url, None, e)
         return out
 
@@ -110,25 +110,25 @@ class WebCrawler:
             WebDriverWait(self.driver, timeout).until(element_present)
             return True
         except TimeoutException:
-            LOG.warn("%s did not load as expected", self.driver.current_url)
+            LOG.warning("%s did not load as expected", self.driver.current_url)
             self.driver.get(self.Market.home)
-            time.sleep(1)
-        except StaleElementReferenceException, e:
-            LOG.warn("couldn't click on %s: \n  %s", item.text, e.message)
+            sleep(1)
+        except StaleElementReferenceException as e:
+            LOG.warning("couldn't click on %s: \n  %s", item.text, e.msg)
             traceback.print_exc()
             raise e
         except WebDriverException:
             return False
 
-    def get_queue_length(self):
+    def get_queue_range(self):
         """
         creates an array of web elements to process
         :return:
         """
         try:
             queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
-        except NoSuchElementException, e:
-            LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, Exception.message)
+        except NoSuchElementException as e:
+            LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, e.msg)
             raise QueueServicingError(url=self.driver.current_url,
                                       reason="NoSuchElementException",
                                       exception=e,
@@ -145,9 +145,9 @@ class WebCrawler:
                         return item
                     else:
                         raise ExcludedResultNotifier()
-                except IndexError, e:
+                except IndexError as e:
                     raise EndOfQueueNotification(i, e, attempt)
-                except NoSuchElementException, e:
+                except NoSuchElementException as e:
                     self.latest_page()
                     raise QueueServicingError(attempt=attempt,
                                               url=self.driver.current_url,
@@ -177,7 +177,7 @@ class WebCrawler:
                 result = self.get_raw_car()
                 url = self.driver.current_url
                 return {'result': result, 'url': url}
-            except ResultCollectionFailure, e:
+            except ResultCollectionFailure as e:
                 raise e
         else:
             raise ResultCollectionFailure(self.driver.current_url, "Error clicking on result", "click returned false")
@@ -195,7 +195,7 @@ class WebCrawler:
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            LOG.warn("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s",
+            LOG.warning("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s",
                      self.driver.current_url, self.Market.result_css)
             return True
 
@@ -203,40 +203,39 @@ class WebCrawler:
         if attempts < int(os.environ['MAX_CLICK_ATTEMPTS']) and self.result_page():
             try:
                 button = self.get_next_button()
-            except NoSuchElementException, e:
+            except NoSuchElementException as e:
                 attempts = attempts + 1
-                time.sleep(attempts)
-                LOG.error("Could not find next button %s", e.message)
+                sleep(attempts)
+                LOG.error("Could not find next button %s", e.msg)
                 self.next_page(attempts)
                 return
-            except StaleElementReferenceException, e:
+            except StaleElementReferenceException as e:
                 attempts = attempts + 1
-                time.sleep(attempts)
-                LOG.error("Could not find next button %s", e.message)
+                sleep(attempts)
+                LOG.error("Could not find next button %s", e.msg)
                 self.next_page(attempts)
                 return
             try:
                 self.safely_click(button, self.Market.next_page_xpath, By.XPATH, 30)
-            except StaleElementReferenceException, e:
+            except StaleElementReferenceException as e:
                 attempts = attempts + 1
-                time.sleep(attempts)
-                LOG.error("Could not find next button %s", e.message)
+                sleep(attempts)
+                LOG.error("Could not find next button %s", e.msg)
                 self.next_page(attempts)
-            self.update_latest_page(5)
             return
         else:
             raise MaxAttemptsReached()
 
     def get_next_button(self):
-        buttons = self.driver.find_elements_by_xpath('//*[@id]')
+        buttons = self.driver.find_elements_by_xpath(self.Market.next_page_xpath)
         for button in buttons:
-            if button.text.upper() == u'NEXT':
+            if button.text.upper() == self.Market.next_button_text.upper():
                 return button
 
     def update_latest_page(self, wait):
-        wait = time.clock() + wait
+        wait = time() + wait
         origin_called = self.last_result
-        while time.clock() < wait:
+        while time() < wait:
             self.last_result = None
             if origin_called == self.driver.current_url:
                 pass
@@ -268,4 +267,4 @@ class WebCrawler:
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
             page = page + 1
-            print page
+            LOG.info(page)

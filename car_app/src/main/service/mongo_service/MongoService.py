@@ -1,5 +1,7 @@
 import hashlib
 import logging as LOG
+from base64 import encode
+
 import pymongo
 import os
 import json
@@ -36,8 +38,8 @@ class MongoService:
         :param car:
         :return:
         """
-        id = hashlib.sha224(car['adDetails']['url']).hexdigest()
-        id = id[:12]
+        id = hashlib.sha224(car['adDetails']['url'].encode('utf-8')).hexdigest()
+        id = id[:24]
         car['_id'] = ObjectId(id)
         car_search = self.cars.find({"_id": car['_id']})
         if car_search.count() == 0:
@@ -50,7 +52,7 @@ class MongoService:
             try:
                 car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(
                     car_before['adDetails']['price'])
-            except KeyError, AttributeError:
+            except KeyError:
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
             x = self.cars.replace_one({'_id': car['_id']}, car)
         LOG.info("Request to write %s to database returned %s", car['adDetails']['url'],

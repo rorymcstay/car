@@ -1,10 +1,10 @@
 import os
-import time
+from time import sleep
 
-import docker
 from io import BytesIO
 import logging as LOG
-from urlparse import urlparse
+from urllib.parse import urlparse
+from docker import DockerClient
 
 from docker.errors import APIError
 
@@ -14,8 +14,8 @@ class Browser:
     def __init__(self, hub_file, browser_file):
         self.port = os.environ["HUB_PORT"]
         self.browser = browser_file
-        self.client = docker.from_env()
-        with open(hub_file) as image:
+        self.client = DockerClient(base_url='unix://var/run/docker.sock')
+        with open(hub_file, 'rb') as image:
             self.hub_image = self.client.images.build(fileobj=image, tag='hub')
 
     def new_service(self, name):
@@ -25,7 +25,7 @@ class Browser:
                                              detach=True,
                                              network=os.environ['APP_NAME'],
                                              name=name + "hub")
-        except APIError, e:
+        except APIError as e:
             if e.status_code == 409:
                 LOG.info('%s already has a hub. connecting' % name)
                 hub = self.client.containers.get('%shub' % name)
@@ -38,14 +38,14 @@ class Browser:
                         raise
             else:
                 LOG.error("Error starting %s_hub", name)
-                LOG.error("Docker error: %s", e.message)
+                LOG.error("Docker error: %s", e.msg)
                 raise
 
         LOG.info("%s hub started", name)
 
         url = self.get_hub_host(hub)
         if url is None:
-            time.sleep(60)
+            sleep(60)
             url = self.get_hub_host(hub)
 
         # building browser image
@@ -60,7 +60,7 @@ class Browser:
                                                      detach=True,
                                                      network=os.environ['APP_NAME'],
                                                      name=name + "browser")
-            except APIError, e:
+            except APIError as e:
                 if e.status_code == 409:
                     LOG.info('%s already has a browser. connecting' % name)
                     browser = self.client.containers.get('%sbrowser' % name)
@@ -74,7 +74,7 @@ class Browser:
                             raise
                 else:
                     LOG.error("Error starting %sbrowser", name)
-                    LOG.error("Docker error: %s", e.message)
+                    LOG.error("Docker error: %s", e.msg)
                     raise
         LOG.info("Webcrawler has started a browser instance:%s", browser.name)
         return {'hub': hub, 'browser': browser, 'url': url}
@@ -86,7 +86,12 @@ class Browser:
                 return line.split(' ')[-1]
         return None
 
+    def get_browser(self):
+        self.hub = self.client.containers.create(self.client.images.get('hub'))
+        self.client.run(self.hub, detach=True)
+        self.get_hub_host()
+        while
+        self.hub = self.client.containers.create(self.client.images.get('browser'))
 
-print os.getcwd()
 
 # browser = BrowserService('/car/service/src/browser/.hub', '/car/service/src/browser/.browser')
