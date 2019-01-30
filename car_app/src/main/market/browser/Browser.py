@@ -1,97 +1,80 @@
-import os
-from time import sleep
-
-from io import BytesIO
+from time import time
+from docker.errors import APIError, ImageNotFound
+from market.utils.BrowserConstants import BrowserConstants
 import logging as LOG
-from urllib.parse import urlparse
-from docker import DockerClient
-
-from docker.errors import APIError
+import docker
 
 
 class Browser:
 
-    def __init__(self, hub_file, browser_file):
-        self.port = os.environ["HUB_PORT"]
-        self.browser = browser_file
-        self.client = DockerClient(base_url='unix://var/run/docker.sock')
-        with open(hub_file, 'rb') as image:
-            self.hub_image = self.client.images.build(fileobj=image, tag='hub')
-
-    def new_service(self, name):
-        # running a hub
+    def __init__(self, name, batch_number, remote=True):
+        """
+        Begins a browser container
+        :type name: string
+        :type remote: bool
+        :param name: the name of the container
+        :param batch_number: the batch it is inteded to process
+        :param remote: int
+        """
+        if remote is False:
+            return
+        self.batch_number = batch_number
+        self.name = name
+        self.client = docker.client.from_env()
+        self.port = BrowserConstants().base_port + batch_number
         try:
-            hub = self.client.containers.run(image=self.hub_image[0].id,
-                                             detach=True,
-                                             network=os.environ['APP_NAME'],
-                                             name=name + "hub")
+            self.browser = self.client.containers.run(BrowserConstants().browser_image,
+                                                      detach=True,
+                                                      name='browser-%s-%s' % (name, batch_number),
+                                                      ports={'4444/tcp': self.port})
+        except ImageNotFound as e:
+            LOG.error("Couldn't find image for hub status: %s", e.explanation)
+            raise e
         except APIError as e:
             if e.status_code == 409:
-                LOG.info('%s already has a hub. connecting' % name)
-                hub = self.client.containers.get('%shub' % name)
-                if hub.status != 'running':
-                    try:
-                        hub = self.client.containers.run(str(hub.name).lower(), detach=True)
-                    except:
-                        LOG.error("Error starting %s_hub. Container was already created but is not likely the issue",
-                                  name)
-                        raise
-            else:
-                LOG.error("Error starting %s_hub", name)
-                LOG.error("Docker error: %s", e.msg)
-                raise
+                self.browser = self.client.containers.get('browser-%s-%s' % (name, batch_number))
+                try:
+                    self.browser.restart()
+                except:
+                    LOG.error("Couldn't start browser image on port %s : %s \n  %s", str(self.port), e.status_code, e.explanation)
+                    return
+        self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
 
-        LOG.info("%s hub started", name)
+    def wait_for_log(self, hub, partial_url):
+        """
+        Wait until the partial_url returns in the logs
+        :type hub: docker.client.containers
+        :param hub:
+        :param partial_url:
+        :return:
+        """
+        timeMax = time() + 10
+        while time() < timeMax:
+            for line in hub.logs().decode().split('\n'):
+                if partial_url in line:
+                    LOG.debug(line)
+                    return line.split(' ')[-1]
+        raise TimeoutError("Timed out waiting for %s to start on port %s" % (self.browser.short_id, str(self.port)))
 
-        url = self.get_hub_host(hub)
-        if url is None:
-            sleep(60)
-            url = self.get_hub_host(hub)
-
-        # building browser image
-        with open(self.browser) as image:
-
-            dockerfile = BytesIO(image.read() % urlparse(url).hostname)
-            browser_image = self.client.images.build(fileobj=dockerfile, rm=True, tag='browser')
-
-            # running browser image
+    def restart(self):
+        try:
+            self.browser.restart()
+            self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+        except APIError:
+            LOG.warning("Couldn't restart container. Killing it")
             try:
-                browser = self.client.containers.run(image=browser_image[0].id,
-                                                     detach=True,
-                                                     network=os.environ['APP_NAME'],
-                                                     name=name + "browser")
+                self.browser.remove()
+                self.__init__(self.name, self.batch_number)
             except APIError as e:
-                if e.status_code == 409:
-                    LOG.info('%s already has a browser. connecting' % name)
-                    browser = self.client.containers.get('%sbrowser' % name)
-                    if browser.status != 'running':
-                        try:
-                            self.client.containers.run(image=browser_image[0].id, detach=True)
-                        except:
-                            LOG.error(
-                                "Error starting %s_browser. Container was already created but is not likely the issue",
-                                name)
-                            raise
-                else:
-                    LOG.error("Error starting %sbrowser", name)
-                    LOG.error("Docker error: %s", e.msg)
-                    raise
-        LOG.info("Webcrawler has started a browser instance:%s", browser.name)
-        return {'hub': hub, 'browser': browser, 'url': url}
+                LOG.warning("Couldn't remove container %s after failing to restart it: %s", self.name, e.explanation)
 
-    def get_hub_host(self, hub):
-        for line in hub.logs().split('\n'):
-            if 'wd/hub' in line:
-                LOG.info(line)
-                return line.split(' ')[-1]
-        return None
+    def quit(self):
+        try:
+            self.browser.stop()
+            self.browser.kill()
+            self.browser.remove()
+        except APIError as e:
+            LOG.warning("Couldn't quit container %s problem was: %s", self.name, e.explanation)
 
-    def get_browser(self):
-        self.hub = self.client.containers.create(self.client.images.get('hub'))
-        self.client.run(self.hub, detach=True)
-        self.get_hub_host()
-        while
-        self.hub = self.client.containers.create(self.client.images.get('browser'))
-
-
-# browser = BrowserService('/car/service/src/browser/.hub', '/car/service/src/browser/.browser')
+    def health_indicator(self):
+        return self.browser.status

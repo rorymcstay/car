@@ -1,2 +1,0 @@
-FROM selenium/hub:latest
-EXPOSE 4444:4444

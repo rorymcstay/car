@@ -47,7 +47,7 @@ class WebCrawler:
             self.chrome_options.add_argument(arguments)
             LOG.info('Local driver initiated for %s', self.Market.name)
         else:
-            url = market.browser
+            url = remote
             LOG.debug("Starting remote driver for %s", market.name)
             options = Options()
             options.add_argument("--headless")
@@ -55,10 +55,7 @@ class WebCrawler:
                                            desired_capabilities=DesiredCapabilities.CHROME,
                                            options=options)
 
-            # TODO Cant establish connection - parse loggs for connection
-            # Connection timingi out
             LOG.info('Remote driver initiated for %s running on %s', self.Market.name, url)
-        # 1520 - couldn't find next button
         self.driver.set_window_size(1120, 900)
         self.history = []
 
@@ -243,20 +240,12 @@ class WebCrawler:
             return
         self.last_result = origin_called
         self.history.append(origin_called)
-        set(self.history)
 
     def get_result_array(self):
         content = self.driver.page_source
         cars = []
         cars.extend(re.findall(r'' + self.Market.result_stub + '[^\"]+', content))
         return cars
-
-    def order_history(self):
-        numbers = []
-        for url in self.history:
-            number = url.findall(r'\{\d+:\d+\}')
-            numbers.append(number)
-            numbers.sort()
 
     def retrace_steps(self, x):
         self.driver.get(self.Market.home)
@@ -268,3 +257,9 @@ class WebCrawler:
                 EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
             page = page + 1
             LOG.info(page)
+
+    def health_indicator(self):
+        return self.driver.current_url
+
+
+

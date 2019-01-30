@@ -1,12 +1,12 @@
 import hashlib
 import logging as LOG
-from base64 import encode
 
 import pymongo
 import os
 import json
 from bson import json_util, ObjectId
 
+from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 
 
 class MongoService:
@@ -20,12 +20,18 @@ class MongoService:
     """
 
     def __init__(self):
-        self.client = pymongo.MongoClient(host=os.getenv('MONGO_URL', '0.0.0.0:27017'),
-                                          username=os.getenv('USERNAME', 'root'),
-                                          password=os.getenv('PASSWORD', 'root'))
-        self.db = self.client[os.getenv('MONGO_DATABASE', 'my_database')]
-        self.cars = self.db[os.getenv("MONGO_COLLECTION", 'cars')]
-        self.market_details_collection = self.db['marketDetails']
+        max_delay= MongoServiceConstants().TIMEOUT
+        host = MongoServiceConstants().HOST
+        username = MongoServiceConstants().USERNAME
+        password = MongoServiceConstants().PASSWORD
+        self.client = pymongo.MongoClient(host=host,
+                                          username=username,
+                                          password=password,
+                                          serverSelectionTimeoutMS=max_delay)
+        self.db = self.client[MongoServiceConstants().DATABASE_NAME]
+        self.cars = self.db[MongoServiceConstants().COLLECTION_NAME]
+        self.market_details_collection = self.db[MongoServiceConstants().MARKETS]
+
         # self.market_details_collection.create_index('adDetails.url', pymongo.ALL)
 
     def save_market_details(self, market_definition):

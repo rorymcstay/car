@@ -29,26 +29,20 @@ browser = '/Users/rorymcstay/IdeaProjects/Car/car/car_app/src/main/market/browse
 APP_PORT = 5000
 APP_HOST = '0.0.0.0'
 
-# browser_service = Browser(hub, browser)
-import docker
-client = docker.client.from_env()
-# browser = browser_service.new_service('donedeal')
 
-
-
-# market = Market(name='donedeal',
-#                 result_css=".card__body",
-#                 result_exclude="Compare, compare, insurance, Insurance".split(','),
-#                 wait_for_car=".cad-header",
-#                 json_identifier="window.adDetails",
-#                 next_page_xpath="//*[@id]",
-#                 # next_page_xpath='/html/body/main/div[1]/div/div[2]/paging/nav/button[12]/span',
-#                 router=routes['_donedeal_router'](make=None,
-#                                                   model=None,
-#                                                   sort="publishdate%20desc"),
-#                 mapper=mappers['_donedeal_mapper'],
-#                 next_button_text="Next",
-#                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
-#                 remote=browser.url)
-# market.start_parrallel(3)
+market = Market(name='donedeal',
+                result_css=".card__body",
+                result_exclude="Compare, compare, insurance, Insurance".split(','),
+                wait_for_car=".cad-header",
+                json_identifier="window.adDetails",
+                next_page_xpath="//*[@id]",
+                # next_page_xpath='/html/body/main/div[1]/div/div[2]/paging/nav/button[12]/span',
+                router=routes['_donedeal_router'](make=None,
+                                                  model=None,
+                                                  sort="publishdate%20desc"),
+                mapper=mappers['_donedeal_mapper'],
+                next_button_text="Next",
+                result_stub='https://www.donedeal.co.uk/cars-for-sale/',
+                remote='http://127.0.0.1:4444/wd/hub')
+market.start_parrallel(10)
 #

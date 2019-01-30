@@ -4,6 +4,7 @@ import threading
 import logging as LOG
 import traceback
 import logging
+from time import time
 
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -11,6 +12,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from market.Worker import Worker
+from market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.service.mongo_service.MongoService import MongoService
@@ -62,11 +64,10 @@ class Market:
         self.service = MongoService()
         self.busy = False
 
+        self.browser = Browser(self.name + '-main', 0, remote=remote)
         if remote is False:
             self.crawler = WebCrawler(self)
             return
-
-        self.browser = remote
         # starting dedicated browser container
         self.crawler = WebCrawler(self, remote)
 
@@ -144,7 +145,9 @@ class Market:
         self.busy = True
         self.crawler.driver.get(self.home)
         latest_results = self.crawler.get_result_array()
-        self.workers = [Worker(i, self) for i in range(min(max_containers, len(latest_results)))]
+        self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
+        page = 1
+        start = time()
         while self.busy:
             results = self.crawler.get_result_array()
             batches = numpy.array_split(results, min(max_containers, len(results)))
@@ -154,6 +157,10 @@ class Market:
             [t.thread.start() for t in self.workers]
             [t.thread.join() for t in self.workers]
             self.crawler.update_latest_page(1)
+            page += 1
+            LOG.info("Cars Collected: %s \n"
+                     "Page Number: %s \n"
+                     "Running for: %s", str(self.get_cars_collected()), str(page), str(time() - start))
 
     def resume(self):
         self.busy = True
@@ -167,5 +174,8 @@ class Market:
         # for i in self.browsers:
         #     i.kill()
         # return "paused"
+
+    def get_cars_collected(self):
+        return sum([w.cars_collected for w in self.workers])
 
 
