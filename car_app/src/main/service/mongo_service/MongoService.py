@@ -61,7 +61,7 @@ class MongoService:
             except KeyError:
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
             x = self.cars.replace_one({'_id': car['_id']}, car)
-        LOG.info("Request to write %s to database returned %s", car['adDetails']['url'],
+        LOG.debug("Request to write %s to database returned %s", car['adDetails']['url'],
                  x.acknowledged)
         return
 

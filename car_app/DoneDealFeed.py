@@ -1,3 +1,4 @@
+import logging
 import os
 
 from src.main.market.Market import Market
@@ -29,6 +30,7 @@ browser = '/Users/rorymcstay/IdeaProjects/Car/car/car_app/src/main/market/browse
 APP_PORT = 5000
 APP_HOST = '0.0.0.0'
 
+logging.basicConfig(level=logging.INFO)
 
 market = Market(name='donedeal',
                 result_css=".card__body",
@@ -43,6 +45,6 @@ market = Market(name='donedeal',
                 mapper=mappers['_donedeal_mapper'],
                 next_button_text="Next",
                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
-                remote='http://127.0.0.1:4444/wd/hub')
-market.start_parrallel(10)
+                remote='http://127.0.0.1:5444/wd/hub')
+market.start_parrallel(4)
 #

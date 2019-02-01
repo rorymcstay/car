@@ -71,5 +71,5 @@ def DoneDeal(car_old, url):
         },
         "adDescription": car_old['description'],
         "adPhotos": get_photos_in_a_list('photos', 'large', car_old)}
-    logging.info("Mapped donedeal car succesfully")
+    logging.debug("Mapped donedeal car succesfully")
     return car

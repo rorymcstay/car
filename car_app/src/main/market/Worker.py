@@ -23,7 +23,7 @@ class Worker:
         self.port = BrowserConstants().base_port + batch_number
         self.market = market
         self.remote = remote
-        self.browser = Browser(market.name, batch_number + 1, remote)
+        self.browser = Browser(market.name, batch_number, remote)
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
     def get_results(self, results, timeout):
@@ -42,24 +42,40 @@ class Worker:
                     self.cars_collected += 1
                     self.mongo.insert(self.market.mapper(rawCar[0], url))
                     LOG.info("thread %s saved their car - %s", self.batch_number, url)
+            LOG.info("Thread %s has finished there batch", self.batch_number)
         except KeyboardInterrupt as stop:
             self.browser.quit()
+            LOG.info("Killing browser %s", self.batch_number)
             raise stop
         except WebDriverException as e:
-            self.webCrawler.driver.quit()
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            try:
+                LOG.error("Webcrawler in thread %s had a WebDriver exception: ", self.batch_number, e.msg)
+                traceback.print_exc()
+                self.webCrawler.driver.quit()
+                self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+                LOG.info("Webcrawler in thread %s restarted", self.batch_number)
+            except Exception as e:
+                traceback.print_exc()
+                LOG.error("Thread %s failed to restart", self.batch_number)
         except APIError as e:
-            self.webCrawler.driver.quit()
-            self.browser.restart()
-            traceback.print_exc()
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            try:
+                LOG.error("DockerClient in thread %s had an APIError: %s", self.batch_number, e.explanation)
+                traceback.print_exc()
+                self.webCrawler.driver.quit()
+                self.browser.restart()
+                traceback.print_exc()
+                self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+                LOG.info("Webcrawler in thread %s restarted", self.batch_number)
+            except Exception as e:
+                traceback.print_exc()
+                LOG.error("Thread %s failed to restart: %s", self.batch_number, e.args)
         except KeyError as e:
-            LOG.error(e)
-            pass
+                LOG.error('Thread %s KeyError: %s', self.batch_number, e)
+                pass
 
     def prepare_batch(self, results=None):
         self.health_check()
-        self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])))
+        self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])), name='Thread %s' % str(self.batch_number))
 
     def make_url(self):
         if self.remote is False:
@@ -70,6 +86,6 @@ class Worker:
         return "http://%s:%s/%s" % (host, port, post_fix)
 
     def health_check(self, exception=None):
-        LOG.info( "Thread 1: %s", str(HealthStatus(exception,
+        LOG.info( "Thread %s: %s", self.batch_number, HealthStatus(exception,
                             browser=self.browser.health_indicator(),
-                            webcrawler=self.webCrawler.health_indicator())))
+                            webcrawler=self.webCrawler.health_indicator()))

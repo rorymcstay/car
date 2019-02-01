@@ -64,7 +64,7 @@ class Market:
         self.service = MongoService()
         self.busy = False
 
-        self.browser = Browser(self.name + '-main', 0, remote=remote)
+        self.browser = Browser(self.name + '-main', 1000, remote=remote)
         if remote is False:
             self.crawler = WebCrawler(self)
             return
@@ -128,7 +128,7 @@ class Market:
                 self.crawler.retrace_steps(x)
             x = x + 1
 
-    def start(self):
+    def start_single(self):
         """
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
         :return:
@@ -151,11 +151,14 @@ class Market:
         while self.busy:
             results = self.crawler.get_result_array()
             batches = numpy.array_split(results, min(max_containers, len(results)))
+            LOG.info("Have %s results for page %s", len(results), page)
             for (w, b) in zip(self.workers, batches):
                 w.prepare_batch(b)
             self.crawler.next_page()
+            LOG.info("Going to page %s", page)
             [t.thread.start() for t in self.workers]
             [t.thread.join() for t in self.workers]
+            LOG.info("Threads have finished")
             self.crawler.update_latest_page(1)
             page += 1
             LOG.info("Cars Collected: %s \n"
