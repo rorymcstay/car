@@ -67,7 +67,7 @@ class Browser:
                 self.__init__(self.name, self.batch_number)
             except APIError as e:
                 LOG.warning("Couldn't remove container %s after failing to restart it: %s", self.name, e.explanation)
-
+    # TODO handle RemoteDisconnected
     def quit(self):
         try:
             self.browser.stop()

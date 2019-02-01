@@ -32,6 +32,7 @@ class Worker:
         :return:
         """
         try:
+            self.health_check(level=LOG.debug)
             for url in results:
                 self.webCrawler.driver.get(url)
                 sleep(timeout)
@@ -44,21 +45,25 @@ class Worker:
                     LOG.info("thread %s saved their car - %s", self.batch_number, url)
             LOG.info("Thread %s has finished there batch", self.batch_number)
         except KeyboardInterrupt as stop:
+            self.health_check(stop.args[0])
             self.browser.quit()
             LOG.info("Killing browser %s", self.batch_number)
             raise stop
         except WebDriverException as e:
             try:
+                self.health_check(e.msg)
                 LOG.error("Webcrawler in thread %s had a WebDriver exception: ", self.batch_number, e.msg)
                 traceback.print_exc()
                 self.webCrawler.driver.quit()
                 self.webCrawler = WebCrawler(self.market, remote=self.make_url())
                 LOG.info("Webcrawler in thread %s restarted", self.batch_number)
             except Exception as e:
+                self.health_check(e.args[0])
                 traceback.print_exc()
                 LOG.error("Thread %s failed to restart", self.batch_number)
         except APIError as e:
             try:
+                self.health_check(e.status_code)
                 LOG.error("DockerClient in thread %s had an APIError: %s", self.batch_number, e.explanation)
                 traceback.print_exc()
                 self.webCrawler.driver.quit()
@@ -67,15 +72,18 @@ class Worker:
                 self.webCrawler = WebCrawler(self.market, remote=self.make_url())
                 LOG.info("Webcrawler in thread %s restarted", self.batch_number)
             except Exception as e:
+                self.health_check(e.args[0])
                 traceback.print_exc()
                 LOG.error("Thread %s failed to restart: %s", self.batch_number, e.args)
         except KeyError as e:
-                LOG.error('Thread %s KeyError: %s', self.batch_number, e)
-                pass
+            self.health_check(e.args[0])
+            LOG.error('Thread %s KeyError: %s', self.batch_number, e)
+            pass
 
     def prepare_batch(self, results=None):
         self.health_check()
-        self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])), name='Thread %s' % str(self.batch_number))
+        self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])),
+                                       name='Thread %s' % str(self.batch_number))
 
     def make_url(self):
         if self.remote is False:
@@ -85,7 +93,16 @@ class Worker:
         post_fix = BrowserConstants().client_connect
         return "http://%s:%s/%s" % (host, port, post_fix)
 
-    def health_check(self, exception=None):
-        LOG.info( "Thread %s: %s", self.batch_number, HealthStatus(exception,
-                            browser=self.browser.health_indicator(),
-                            webcrawler=self.webCrawler.health_indicator()))
+    def health_check(self, exception='None', level=LOG.info):
+        health = HealthStatus(exception,
+                              browser=self.browser.health_indicator(),
+                              webcrawler=self.webCrawler.health_indicator())
+        level(
+            """
+            Thread {0}: |exception |browser |webCrawler
+                        |{1}       |{2}     |{3}
+                        _______________________________
+            """.format(str(self.batch_number),
+                       exception,
+                       health.browser,
+                       health.webcrawler))
