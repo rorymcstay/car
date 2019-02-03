@@ -204,13 +204,13 @@ class WebCrawler:
             except NoSuchElementException as e:
                 attempts = attempts + 1
                 sleep(attempts)
-                LOG.error("Could not find next button %s", e.msg)
+                LOG.warning("Could not find next button %s", e.msg)
                 self.next_page(attempts)
                 return
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
-                LOG.error("Could not find next button %s", e.msg)
+                LOG.warning("Could not find next button %s", e.msg)
                 self.next_page(attempts)
                 return
             try:

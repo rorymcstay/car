@@ -1,7 +1,6 @@
 import numpy
 import os
 import threading
-import logging as LOG
 import traceback
 import logging
 from time import time
@@ -11,13 +10,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from market.Worker import Worker
-from market.browser.Browser import Browser
-from market.utils.IgnoredExceptions import IgnoredExceptions
-from market.crawling.WebCrawler import WebCrawler
-from market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
+from src.main.market.Worker import Worker
+from src.main.market.browser.Browser import Browser
+from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
+from src.main.market.crawling.WebCrawler import WebCrawler
+from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.service.mongo_service.MongoService import MongoService
+from src.main.utils.LogGenerator import create_log_handler
 
+LOG = create_log_handler('market')
 
 class Market:
 
@@ -166,10 +167,12 @@ class Market:
 
     def garbage_collection(self):
         for worker in self.workers:
+            worker.health_check()
             if worker.health.exception == 'None':
                 pass
-            elif any(ignore.isinstance(worker.health.exception) for ignore in IgnoredExceptions().ignore):
+            elif any(isinstance(ignore, type(worker.health.exception)) for ignore in IgnoredExceptions().ignore):
                 pass
             else:
+                LOG.warning("Doing garbage collection on thread: {}".format(self.name))
                 worker.clean_up()
                 worker.regenerate()

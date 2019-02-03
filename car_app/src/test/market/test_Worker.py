@@ -1,7 +1,7 @@
 from unittest import TestCase
 import unittest
 
-from market.Worker import Worker
+from src.main.market.Worker import Worker
 from resources.donedeal_market import market
 
 

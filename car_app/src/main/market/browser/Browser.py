@@ -1,6 +1,6 @@
 from time import time
 from docker.errors import APIError, ImageNotFound
-from market.utils.BrowserConstants import BrowserConstants
+from src.main.market.utils.BrowserConstants import BrowserConstants
 import logging as LOG
 import docker
 

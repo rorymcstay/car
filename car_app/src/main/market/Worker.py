@@ -6,11 +6,11 @@ from time import sleep
 from docker.errors import APIError
 from selenium.common.exceptions import WebDriverException
 
-from market.browser.Browser import Browser
-from market.crawling.WebCrawler import WebCrawler
-from market.utils.BrowserConstants import BrowserConstants
-from market.utils.HealthStatus import HealthStatus
-from utils.LogGenerator import create_log_handler
+from src.main.market.browser.Browser import Browser
+from src.main.market.crawling.WebCrawler import WebCrawler
+from src.main.market.utils.BrowserConstants import BrowserConstants
+from src.main.market.utils.HealthStatus import HealthStatus
+from src.main.utils.LogGenerator import create_log_handler
 from service.mongo_service.MongoService import MongoService
 
 LOG = create_log_handler('worker')
@@ -85,7 +85,6 @@ class Worker:
             pass
 
     def prepare_batch(self, results=None):
-        self.health_check()
         self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])),
                                        name='Thread %s' % str(self.batch_number))
 
