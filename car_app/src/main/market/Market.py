@@ -1,6 +1,3 @@
-import atexit
-import sys
-
 import numpy
 import os
 import threading
@@ -17,8 +14,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from market.Worker import Worker
 from market.browser.Browser import Browser
 from market.utils.IgnoredExceptions import IgnoredExceptions
-from src.main.market.crawling.WebCrawler import WebCrawler
-from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
+from market.crawling.WebCrawler import WebCrawler
+from market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.service.mongo_service.MongoService import MongoService
 
 

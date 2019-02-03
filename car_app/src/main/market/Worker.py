@@ -1,4 +1,3 @@
-import logging as LOG
 import os
 import threading
 import traceback
@@ -11,7 +10,10 @@ from market.browser.Browser import Browser
 from market.crawling.WebCrawler import WebCrawler
 from market.utils.BrowserConstants import BrowserConstants
 from market.utils.HealthStatus import HealthStatus
+from utils.LogGenerator import create_log_handler
 from service.mongo_service.MongoService import MongoService
+
+LOG = create_log_handler('worker')
 
 
 class Worker:
