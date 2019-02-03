@@ -1,3 +1,6 @@
+import atexit
+import sys
+
 import numpy
 import os
 import threading
@@ -13,6 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from market.Worker import Worker
 from market.browser.Browser import Browser
+from market.utils.IgnoredExceptions import IgnoredExceptions
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.service.mongo_service.MongoService import MongoService
@@ -64,11 +68,11 @@ class Market:
         self.service = MongoService()
         self.busy = False
 
-        self.browser = Browser(self.name + '-main', 1000, remote=remote)
         if remote is False:
             self.crawler = WebCrawler(self)
             return
         # starting dedicated browser container
+        self.browser = Browser(self.name + '-main', 1000)
         self.crawler = WebCrawler(self, remote)
 
     def collect_cars(self, single=None):
@@ -79,17 +83,15 @@ class Market:
         x = 0
         while self.busy:
             LOG.info("Page:%s", str(x))
-            LOG.debug("Queue length %s", self.crawler)
             if single is None:
                 queue = self.crawler.get_queue_range()
             else:
                 queue = [single]
-            for i in queue: # TODO Handle webdriver exceptions within this block
+            for i in queue:  # TODO Handle webdriver exceptions within this block
                 raw_cars = False
                 try:
                     result = self.crawler.get_queue_member(i, self.result_exclude)
                     raw_cars = self.crawler.get_result(result)
-
                 except ExcludedResultNotifier:
                     LOG.warning("Skipped excluded result")
                     pass
@@ -119,8 +121,7 @@ class Market:
                             # TODO handle fails when saving to the database in MongoService
                             LOG.info('Saved result from %s', self.crawler.driver.current_url)
                         except Exception as e:
-                            # TODO move error handling to respective services
-                            LOG.warning('failed result from %s \n %s', self.crawler.driver.current_url, e.msg)
+                            LOG.warning('failed result from %s \n %s', self.crawler.driver.current_url, e.args[0])
                             traceback.print_exc()
                             pass
             go_next = self.crawler.next_page()
@@ -133,52 +134,45 @@ class Market:
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
         :return:
         """
-        self.crawler.driver.get(self.home)
         self.crawler.latest_page = self.home
         self.busy = True
         thread = threading.Thread(target=self.collect_cars, args=())
-        thread.daemon = True
         thread.start()
         return "started"
 
     def start_parrallel(self, max_containers, remote=True):
         self.busy = True
-        self.crawler.driver.get(self.home)
         latest_results = self.crawler.get_result_array()
         self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
         page = 1
         start = time()
         while self.busy:
+            LOG.info("Processing page %s", page)
             results = self.crawler.get_result_array()
             batches = numpy.array_split(results, min(max_containers, len(results)))
-            LOG.info("Have %s results for page %s", len(results), page)
+            LOG.debug("Thread-Main: n_results: %s |page: %s", len(results), page)
+            self.garbage_collection()
             for (w, b) in zip(self.workers, batches):
                 w.prepare_batch(b)
             self.crawler.next_page()
-            LOG.info("Going to page %s", page)
             [t.thread.start() for t in self.workers]
             [t.thread.join() for t in self.workers]
-            LOG.info("Threads have finished")
+            LOG.info("All threads have returned")
             self.crawler.update_latest_page(1)
             page += 1
             LOG.info("Cars Collected: %s \n"
                      "Page Number: %s \n"
                      "Running for: %s", str(self.get_cars_collected()), str(page), str(time() - start))
 
-    def resume(self):
-        self.busy = True
-        thread = threading.Thread(target=self.collect_cars, args=())
-        thread.daemon = True
-        thread.start()
-        return "resumed"
-
-    def stop(self):
-        self.busy = False
-        # for i in self.browsers:
-        #     i.kill()
-        # return "paused"
-
     def get_cars_collected(self):
         return sum([w.cars_collected for w in self.workers])
 
-
+    def garbage_collection(self):
+        for worker in self.workers:
+            if worker.health.exception == 'None':
+                pass
+            elif any(ignore.isinstance(worker.health.exception) for ignore in IgnoredExceptions().ignore):
+                pass
+            else:
+                worker.clean_up()
+                worker.regenerate()

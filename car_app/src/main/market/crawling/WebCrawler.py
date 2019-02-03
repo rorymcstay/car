@@ -17,6 +17,7 @@ from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from bs4 import BeautifulSoup
+from urllib3.exceptions import MaxRetryError
 
 from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  EndOfQueueNotification,
@@ -245,7 +246,7 @@ class WebCrawler:
         content = self.driver.page_source
         cars = []
         cars.extend(re.findall(r'' + self.Market.result_stub + '[^\"]+', content))
-        return cars
+        return list(set(cars))
 
     def retrace_steps(self, x):
         self.driver.get(self.Market.home)
@@ -259,7 +260,17 @@ class WebCrawler:
             LOG.info(page)
 
     def health_indicator(self):
-        return self.driver.current_url
+        try:
+            return self.driver.current_url
+        except (WebDriverException, Exception) as e:
+            return 'Unhealthy'
+
+    def quit(self):
+        try:
+            self.driver.quit()
+        except MaxRetryError as e:
+            LOG.error("Tried to close browser when it was not running.")
+
 
 
 

@@ -20,7 +20,7 @@ class MongoService:
     """
 
     def __init__(self):
-        max_delay= MongoServiceConstants().TIMEOUT
+        max_delay = MongoServiceConstants().TIMEOUT
         host = MongoServiceConstants().HOST
         username = MongoServiceConstants().USERNAME
         password = MongoServiceConstants().PASSWORD
@@ -38,7 +38,7 @@ class MongoService:
         operation = self.market_details_collection.insert(market_definition)
         x = self.cars.insert_many(market_definition)
 
-    def insert(self, car):
+    def insert(self, car, batch_number='Main'):
         """
         Insert a car into the database after generating an oid from the url. This ensures uniqueness of items in collection
         :param car:
@@ -61,7 +61,9 @@ class MongoService:
             except KeyError:
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
             x = self.cars.replace_one({'_id': car['_id']}, car)
-        LOG.debug("Request to write %s to database returned %s", car['adDetails']['url'],
+        LOG.info("Thread-%s: Request to write %s to database returned %s",
+                 batch_number,
+                 car['adDetails']['url'],
                  x.acknowledged)
         return
 

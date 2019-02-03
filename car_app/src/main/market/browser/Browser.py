@@ -7,17 +7,14 @@ import docker
 
 class Browser:
 
-    def __init__(self, name, batch_number, remote=True):
+    def __init__(self, name, batch_number):
         """
         Begins a browser container
         :type name: string
-        :type remote: bool
         :param name: the name of the container
         :param batch_number: the batch it is inteded to process
-        :param remote: int
         """
-        if remote is False:
-            return
+
         self.batch_number = batch_number
         self.name = name
         self.client = docker.client.from_env()
@@ -38,6 +35,9 @@ class Browser:
                 except:
                     LOG.error("Couldn't start browser image on port %s : %s \n  %s", str(self.port), e.status_code, e.explanation)
                     return
+            if e.status_code == 500:
+                LOG.error("Tried to start browser but couldn't Could be that the port %s", str(self.port))
+                raise e
         self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
 
     def wait_for_log(self, hub, partial_url):
@@ -48,7 +48,7 @@ class Browser:
         :param partial_url:
         :return:
         """
-        timeMax = time() + 10
+        timeMax = time() + 20
         while time() < timeMax:
             for line in hub.logs().decode().split('\n'):
                 if partial_url in line:
@@ -70,11 +70,18 @@ class Browser:
     # TODO handle RemoteDisconnected
     def quit(self):
         try:
-            self.browser.stop()
             self.browser.kill()
-            self.browser.remove()
         except APIError as e:
             LOG.warning("Couldn't quit container %s problem was: %s", self.name, e.explanation)
+        try:
+            self.browser.remove()
+        except APIError as e:
+            LOG.warning("Failed to remove container %s problem was: %s", self.name, e.explanation)
 
     def health_indicator(self):
+        try:
+            self.browser.reload()
+        except APIError as e:
+            if e.status_code == 404:
+                return 'Removed'
         return self.browser.status

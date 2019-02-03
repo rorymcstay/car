@@ -8,6 +8,7 @@ from src.main.service.mongo_service.QueryConstructor import QueryConstructor
 from src.main.service.rest.flask_helper.headers import JSON
 from src.main.service.mongo_service.MongoService import MongoService
 
+
 query = Blueprint('query', __name__,)
 service = MongoService()
 
@@ -42,6 +43,6 @@ class Query(FlaskView):
     def json_query(self):
         req = yaml.safe_load(json.dumps(request.get_json()))
         x = service.cars.find(req['query'], req['projection'])
-        return json_util.dumps(x)
+        return json_util.dumps(x, default=json_util.default)
 
 

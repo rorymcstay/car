@@ -6,6 +6,7 @@ from src.main.service.rest.Command import Command
 from src.main.service.rest.Query import Query
 
 logging.basicConfig(level=logging.DEBUG)
+logging.FileHandler('/var/tmp/myapp.log')
 
 app = Flask(__name__)
 Command.register(app)

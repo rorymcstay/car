@@ -25,7 +25,7 @@ os.environ["USERNAME"] = "root"
 os.environ["PASSWORD"] = "root"
 os.environ["PASSWORD"] = "20"
 
-market = Market(name='donedeal',
+market = Market(name='test_donedeal',
                 result_css=".card__body",
                 result_exclude="Compare, compare, insurance, Insurance".split(','),
                 wait_for_car=".cad-header",
