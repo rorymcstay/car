@@ -5,6 +5,9 @@ from time import sleep
 
 from docker.errors import APIError
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
@@ -28,7 +31,8 @@ class Worker:
         self.browser = Browser(market.name, batch_number)
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
-    def get_results(self, results, timeout):
+    #   TODO the worker should write to Mongo in batches
+    def get_results(self, results):
         """
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
         :return:
@@ -37,7 +41,8 @@ class Worker:
             self.health_check(level=LOG.debug)
             for url in results:
                 self.webCrawler.driver.get(url)
-                sleep(timeout)
+                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
+                WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
                 if rawCar is False:
                     LOG.warning("Thread-%s: Failed-%s", self.batch_number, url)
@@ -85,7 +90,7 @@ class Worker:
             pass
 
     def prepare_batch(self, results=None):
-        self.thread = threading.Thread(target=self.get_results, args=(results, int(os.environ['WORKER_TIMEOUT'])),
+        self.thread = threading.Thread(target=self.get_results, args=([results]),
                                        name='Thread %s' % str(self.batch_number))
 
     def make_url(self):
@@ -93,6 +98,7 @@ class Worker:
             return False
         port = self.batch_number + BrowserConstants().base_port
         host = BrowserConstants().host
+        # host = self.browser.browser.name
         post_fix = BrowserConstants().client_connect
         return "http://%s:%s/%s" % (host, port, post_fix)
 

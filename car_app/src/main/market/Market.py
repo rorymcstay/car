@@ -10,6 +10,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
+from src.main.market.utils.BrowserConstants import BrowserConstants
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
@@ -71,7 +73,7 @@ class Market:
             return
         # starting dedicated browser container
         self.browser = Browser(self.name + '-main', 1000)
-        self.crawler = WebCrawler(self, remote)
+        self.crawler = WebCrawler(self, 'http://{}:5444/wd/hub'.format(BrowserConstants().host))
 
     def collect_cars(self, single=None):
         """
@@ -106,7 +108,7 @@ class Market:
                 try:
                     self.crawler.driver.get(self.crawler.last_result)
                     element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.result_css))
-                    WebDriverWait(self.crawler.driver, int(os.environ['RETURN_TIMEOUT'])).until(element_present)
+                    WebDriverWait(self.crawler.driver, WebCrawlerConstants().click_timeout).until(element_present)
                 except TimeoutException:
                     LOG.warning("timeout exception")
                 if raw_cars is not False:

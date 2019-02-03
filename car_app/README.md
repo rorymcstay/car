@@ -1,11 +1,14 @@
-# Classified car ad API
+# Classified car ad webscraper
+
+This module is a webscraper for classified adverts of cars. Given a few
+input parameters taken from the html source. A mapping module and a router
+module. The app will traverse the website collecting cars in parrallel
+using Workers. Each Worker controls a docker container with selenium standalone
+chrome image.
 
 
-This program consists of 3 parts. A Parsing library for parsing html strings
-to export JSON to enable the construction of a car object. A car class which
-has multiple types representing each market place. The difference for each 
-is the way in which it manipulates the JSON to construct the car class. The
-car class is as follows:
+
+The data model:
 
     ["market1": "Car1_url": {
                 Make: "Ford",

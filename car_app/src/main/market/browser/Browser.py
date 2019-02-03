@@ -48,7 +48,7 @@ class Browser:
         :param partial_url:
         :return:
         """
-        timeMax = time() + 20
+        timeMax = time() + BrowserConstants().CONTAINER_TIMEOUT
         while time() < timeMax:
             for line in hub.logs().decode().split('\n'):
                 if partial_url in line:

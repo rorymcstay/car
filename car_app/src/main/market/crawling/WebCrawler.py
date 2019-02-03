@@ -1,6 +1,5 @@
 import json
 import logging as LOG
-import os
 import re
 from time import time, sleep
 import traceback
@@ -19,6 +18,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from bs4 import BeautifulSoup
 from urllib3.exceptions import MaxRetryError
 
+from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  EndOfQueueNotification,
                                                  QueueServicingError,
@@ -107,10 +107,6 @@ class WebCrawler:
             element_present = EC.presence_of_all_elements_located((selector, wait_for))
             WebDriverWait(self.driver, timeout).until(element_present)
             return True
-        except TimeoutException:
-            LOG.warning("%s did not load as expected", self.driver.current_url)
-            self.driver.get(self.Market.home)
-            sleep(1)
         except StaleElementReferenceException as e:
             LOG.warning("couldn't click on %s: \n  %s", item.text, e.msg)
             traceback.print_exc()
@@ -134,7 +130,7 @@ class WebCrawler:
         return range(len(queue))
 
     def get_queue_member(self, i, ignore, attempt=0):
-        if attempt < int(os.environ['MAX_GET_RESULT_ATTEMPT']):
+        if attempt < WebCrawlerConstants().max_attempts:
             if self.result_page():
                 try:
                     queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
@@ -198,7 +194,7 @@ class WebCrawler:
             return True
 
     def next_page(self, attempts=0):
-        if attempts < int(os.environ['MAX_CLICK_ATTEMPTS']) and self.result_page():
+        if attempts < WebCrawlerConstants().max_attempts and self.result_page():
             try:
                 button = self.get_next_button()
             except NoSuchElementException as e:
@@ -218,8 +214,10 @@ class WebCrawler:
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
-                LOG.error("Could not find next button %s", e.msg)
+                LOG.error("Could not click on next button %s", e.msg)
                 self.next_page(attempts)
+            except TimeoutException:
+                LOG.warning("Next page did not load as expected")
             return
         else:
             raise MaxAttemptsReached()

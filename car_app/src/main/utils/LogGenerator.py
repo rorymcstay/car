@@ -3,7 +3,7 @@ import os
 
 
 def create_log_handler(name):
-    LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
+    LOGLEVEL = os.getenv('LOGLEVEL', 'INFO').upper()
     LOG = logging.getLogger(name)
     LOG.setLevel(level=LOGLEVEL)
     # create file handler which logs even debug messages

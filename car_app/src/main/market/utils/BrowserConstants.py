@@ -1,3 +1,5 @@
+import os
+
 import docker
 
 docker_client = docker.client.from_env()
@@ -5,10 +7,11 @@ docker_client = docker.client.from_env()
 class BrowserConstants:
 
     def __init__(self):
+        self.CONTAINER_TIMEOUT = int(os.getenv('CONTAINER_TIMEOUT', 10))
         self.CONTAINER_SUCCESS = 'Selenium Server is up and running on port'
-        self.host = '127.0.0.1'
-        self.browser_image_debug = docker_client.images.get('selenium/standalone-chrome-debug')
-        self.browser_image = docker_client.images.get('selenium/standalone-chrome-debug')
+        self.host = os.getenv('DRIVER_HOST', 'localhost')
+        self.base_port = int(os.getenv('DRIVER_PORT', '4444'))
+
+        self.browser_image = docker_client.images.get(os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome'))
         self.client_connect = 'wd/hub'
-        self.node_connect = 'grid/register'
-        self.base_port = 4444
+        self.worker_timeout = int(os.getenv('WORKER_TIMEOUT', '3'))

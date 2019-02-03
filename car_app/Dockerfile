@@ -7,6 +7,7 @@ WORKDIR /home
 # Copying over necessary files
 COPY src/main src/
 COPY ./start.service ./
+COPY ./DoneDealFeed.py ./
 COPY requirements.txt ./
 
 # The following is to install numpy
@@ -20,4 +21,4 @@ RUN pip install -U pip
 RUN pip install -r ./requirements.txt
 
 # Entrypoint
-CMD ["python", "./start.service" ]
+CMD ["python", "./DoneDealFeed.py" ]

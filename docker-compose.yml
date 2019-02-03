@@ -31,6 +31,7 @@ services:
       - ./car_app/src:/home/src
       - ./car_app/out:/home/out
       - log-volume:/home/out
+      - /var/run/docker.sock:/var/run/docker.sock # mount the docker.sock to allow this container to control daemon
     depends_on:
       - mongo
     ports:

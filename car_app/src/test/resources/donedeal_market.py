@@ -5,7 +5,6 @@ from src.main.market.crawling.Routers import routes
 
 os.environ["MAX_CLICK_ATTEMPTS"] = "5"
 os.environ["MAX_GET_RESULT_ATTEMPT"] = "5"
-os.environ["CLICK_TIMEOUT"] = "3"
 os.environ["RETURN_TIMEOUT"] = "3"
 os.environ["BROWSER_IMAGE"] = "selenium/node-chrome:latest"
 os.environ["DRIVER_PORT"] = "4444"
