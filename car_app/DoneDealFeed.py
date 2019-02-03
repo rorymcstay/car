@@ -46,6 +46,6 @@ market = Market(name='donedeal',
                 next_button_text="Next",
                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
                 remote='http://127.0.0.1:5444/wd/hub')
-market.crawler.retrace_steps(5)
-market.start_parrallel(4)
+market.crawler.retrace_steps(60)
+market.start_parrallel(6)
 #

@@ -11,7 +11,7 @@ from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants
 from src.main.market.utils.HealthStatus import HealthStatus
 from src.main.utils.LogGenerator import create_log_handler
-from service.mongo_service.MongoService import MongoService
+from src.main.service.mongo_service.MongoService import MongoService
 
 LOG = create_log_handler('worker')
 
