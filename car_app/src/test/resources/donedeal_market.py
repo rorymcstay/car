@@ -1,4 +1,6 @@
 import os
+
+from resources.TestConstants import TestConstants
 from src.main.market.Market import Market
 from src.main.market.mapping.Mappers import mappers
 from src.main.market.crawling.Routers import routes
@@ -35,7 +37,9 @@ market = Market(name='test_donedeal',
                                                   sort="publishdate%20desc"),
                 mapper=mappers['_donedeal_mapper'],
                 next_button_text="Next",
-                result_stub='https://www.donedeal.co.uk/cars-for-sale/')
+                result_stub='https://www.donedeal.co.uk/cars-for-sale/',
+                remote='http://{}:{}/wd/hub'.format(TestConstants().browser_host,
+                                                    TestConstants().browser_port))
 
 next_page_expectation = [
     "https://www.donedeal.co.uk/cars?sort=publishdate%20desc&start=28",

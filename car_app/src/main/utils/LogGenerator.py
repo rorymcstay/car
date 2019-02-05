@@ -3,6 +3,7 @@ import os
 
 
 def create_log_handler(name):
+    '''Makes a log handler with format for telegraf/grafana. outputs it to root/out'''
     LOGLEVEL = os.getenv('LOGLEVEL', 'INFO').upper()
     LOG = logging.getLogger(name)
     LOG.setLevel(level=LOGLEVEL)

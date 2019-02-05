@@ -1,11 +1,11 @@
 import hashlib
 import logging as LOG
+import threading
 
 import pymongo
-import os
 import json
 from bson import json_util, ObjectId
-
+from src.main.car.Domain import CarType
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 
 
@@ -34,9 +34,11 @@ class MongoService:
 
         # self.market_details_collection.create_index('adDetails.url', pymongo.ALL)
 
-    def save_market_details(self, market_definition):
-        operation = self.market_details_collection.insert(market_definition)
-        x = self.cars.insert_many(market_definition)
+    def save_market_details(self, name, market_definition):
+        id = hashlib.sha3_224(name.encode('utf-8')).hexdigest()
+        id = id[:24]
+        market_definition['_id'] = ObjectId(id)
+        self.market_details_collection.insert(market_definition)
 
     def insert(self, car, batch_number='Main'):
         """
@@ -46,6 +48,9 @@ class MongoService:
         """
         id = hashlib.sha224(car['adDetails']['url'].encode('utf-8')).hexdigest()
         id = id[:24]
+        carType = CarType(car['carDetails']['make'], car['carDetails']['model'])
+        updateCar = threading.Thread(carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION]), car['adDetails']['year'])
+        updateCar.start()
         car['_id'] = ObjectId(id)
         car_search = self.cars.find({"_id": car['_id']})
         if car_search.count() == 0:

@@ -229,6 +229,7 @@ class WebCrawler:
                 return button
 
     def update_latest_page(self, wait):
+        """Updates the latest pages and stores it in the WebCrawler.last_result field and updates history"""
         wait = time() + wait
         origin_called = self.last_result
         while time() < wait:

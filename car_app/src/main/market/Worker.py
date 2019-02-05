@@ -1,7 +1,5 @@
-import os
 import threading
 import traceback
-from time import sleep
 
 from docker.errors import APIError
 from selenium.common.exceptions import WebDriverException

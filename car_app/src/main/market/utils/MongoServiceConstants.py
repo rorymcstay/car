@@ -10,3 +10,4 @@ class MongoServiceConstants(object):
         self.USERNAME = os.getenv('MONGO_USER', 'root')
         self.HOST = os.getenv('MONGO_HOST', '0.0.0.0:27017')
         self.TIMEOUT =os.getenv('MONGO_TIMEOUT', 10)
+        self.CAR_TYPE_COLLECTION = os.getenv('CAR_TYPE_COLLECTION', 'carType')

@@ -1,16 +1,8 @@
 import numpy
-import os
 import threading
-import traceback
-import logging
 from time import time
-
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
-from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
+from selenium.common.exceptions import NoSuchElementException
+from src.main.market.persistence.Persistence import Persistence
 from src.main.market.utils.BrowserConstants import BrowserConstants
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
@@ -22,6 +14,7 @@ from src.main.utils.LogGenerator import create_log_handler
 
 LOG = create_log_handler('market')
 
+
 class Market:
 
     def __init__(self, name,
@@ -31,6 +24,8 @@ class Market:
                  json_identifier,
                  next_page_xpath, result_stub, mapper, router, next_button_text, remote=False):
         """
+        Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
+        the specific details of the webpage source.
 
         :param name: name of market place for reference
         :param result_css: the css path to the result item
@@ -49,13 +44,8 @@ class Market:
         self.result_stub = result_stub
         self.results = None
         self.results_batched = None
-        logging.getLogger('Market: %s' % name)
-        """
-        :type remote: BrowserService
-        """
         self.name = name
         self.next_button_text = next_button_text
-
         self.next_page_xpath = next_page_xpath
         self.result_css = result_css
         self.result_exclude = result_exclude
@@ -69,11 +59,14 @@ class Market:
         self.busy = False
 
         if remote is False:
-            self.crawler = WebCrawler(self)
+            self.webCrawler = WebCrawler(self)
             return
         # starting dedicated browser container
         self.browser = Browser(self.name + '-main', 1000)
-        self.crawler = WebCrawler(self, 'http://{}:5444/wd/hub'.format(BrowserConstants().host))
+        self.webCrawler = WebCrawler(self, 'http://{}:5444/wd/hub'.format(BrowserConstants().host))
+
+        self.persistence = Persistence(self)
+        self.persistence.save_market_details()
 
     def collect_cars(self, single=None):
         """
@@ -84,14 +77,14 @@ class Market:
         while self.busy:
             LOG.info("Page:%s", str(x))
             if single is None:
-                queue = self.crawler.get_queue_range()
+                queue = self.webCrawler.get_queue_range()
             else:
                 queue = [single]
             for i in queue:  # TODO Handle webdriver exceptions within this block
                 raw_cars = False
                 try:
-                    result = self.crawler.get_queue_member(i, self.result_exclude)
-                    raw_cars = self.crawler.get_result(result)
+                    result = self.webCrawler.get_queue_member(i, self.result_exclude)
+                    raw_cars = self.webCrawler.get_result(result)
                 except ExcludedResultNotifier:
                     LOG.warning("Skipped excluded result")
                     pass
@@ -103,30 +96,12 @@ class Market:
                     pass
                 except NoSuchElementException:
                     LOG.error("Could not find car")
-                    self.crawler.latest_page()
+                    self.webCrawler.latest_page()
                     pass
-                try:
-                    self.crawler.driver.get(self.crawler.last_result)
-                    element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.result_css))
-                    WebDriverWait(self.crawler.driver, WebCrawlerConstants().click_timeout).until(element_present)
-                except TimeoutException:
-                    LOG.warning("timeout exception")
-                if raw_cars is not False:
-                    LOG.debug('Got raw car from %s', self.crawler.driver.current_url)
-                    for rawCar in raw_cars['result']:
-                        try:
-                            car = self.mapper(rawCar, raw_cars['url'])
-                            LOG.debug('Saving result from %s', self.crawler.driver.current_url)
-                            self.service.insert(car)
-                            # TODO handle fails when saving to the database in MongoService
-                            LOG.info('Saved result from %s', self.crawler.driver.current_url)
-                        except Exception as e:
-                            LOG.warning('failed result from %s \n %s', self.crawler.driver.current_url, e.args[0])
-                            traceback.print_exc()
-                            pass
-            go_next = self.crawler.next_page()
+
+            go_next = self.webCrawler.next_page()
             if not go_next:
-                self.crawler.retrace_steps(x)
+                self.webCrawler.retrace_steps(x)
             x = x + 1
 
     def start_single(self):
@@ -134,7 +109,7 @@ class Market:
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
         :return:
         """
-        self.crawler.latest_page = self.home
+        self.webCrawler.latest_page = self.home
         self.busy = True
         thread = threading.Thread(target=self.collect_cars, args=())
         thread.start()
@@ -142,32 +117,39 @@ class Market:
 
     def start_parrallel(self, max_containers, remote=True):
         self.busy = True
-        latest_results = self.crawler.get_result_array()
+        Persistence(self).return_to_previous()
+        latest_results = self.webCrawler.get_result_array()
         self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
         page = 1
         start = time()
         while self.busy:
             LOG.info("Processing page %s", page)
-            results = self.crawler.get_result_array()
+            results = self.webCrawler.get_result_array()
             batches = numpy.array_split(results, min(max_containers, len(results)))
             LOG.debug("Thread-Main: n_results: %s |page: %s", len(results), page)
             self.garbage_collection()
             for (w, b) in zip(self.workers, batches):
                 w.prepare_batch(b)
-            self.crawler.next_page()
+            self.webCrawler.next_page()
             [t.thread.start() for t in self.workers]
             [t.thread.join() for t in self.workers]
             LOG.info("All threads have returned")
-            self.crawler.update_latest_page(1)
+            self.webCrawler.update_latest_page(1)
             page += 1
             LOG.info("Cars Collected: %s \n"
                      "Page Number: %s \n"
                      "Running for: %s", str(self.get_cars_collected()), str(page), str(time() - start))
+            self.persistence.save_progress()
 
     def get_cars_collected(self):
+        """ returns the number of cars collected """
         return sum([w.cars_collected for w in self.workers])
 
     def garbage_collection(self):
+        """
+        does a health check and restarts those with exceptions
+        :return:
+        """
         for worker in self.workers:
             worker.health_check()
             if worker.health.exception == 'None':

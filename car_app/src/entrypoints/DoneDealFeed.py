@@ -1,6 +1,3 @@
-import logging
-import os
-
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
 from src.main.market.mapping.Mappers import mappers
@@ -20,7 +17,7 @@ market = Market(name='donedeal',
                 next_button_text="Next",
                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
                 remote='http://0.0.0.0:5444/wd/hub')
-market.crawler.driver.get(market.home)
+market.webCrawler.driver.get(market.home)
 
 market.start_parrallel(5)
 #
