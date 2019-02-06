@@ -1,10 +1,15 @@
-import os
-
 from market.utils.BrowserConstants import get_open_port
 from resources.TestConstants import TestConstants
 from src.main.market.Market import Market
 from src.main.market.mapping.Mappers import mappers
 from src.main.market.crawling.Routers import routes
+
+import docker.client
+
+client=docker.client.from_env()
+client.containers.run(TestConstants().mongo_image, detach=True,
+                      name='test_mongo',
+                      ports={'27017/tcp' : TestConstants().mongo_port})
 
 market = Market(name='test_donedeal',
                 result_css=".card__body",
