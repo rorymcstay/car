@@ -22,3 +22,8 @@ class TestWorker(TestCase):
         worker.health_check()
         self.assertEqual(worker.health.browser, 'Removed')
         self.assertEqual(worker.health.webcrawler, 'Unhealthy')
+
+
+if __name__ == '__main__':
+    unittest.main()
+

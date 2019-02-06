@@ -1,4 +1,5 @@
 import time
+import unittest
 from unittest import TestCase
 from market.Worker import Worker
 from resources.donedeal_market import market
@@ -31,3 +32,8 @@ class TestPersistence(TestCase):
 
         '''Check we returned succesfully'''
         self.assertEqual(market.webCrawler.driver.current_url, latest)
+
+
+if __name__ == '__main__':
+    unittest.main()
+

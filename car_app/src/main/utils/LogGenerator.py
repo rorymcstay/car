@@ -1,5 +1,6 @@
 import logging as logging
 import os
+import traceback
 
 
 def create_log_handler(name):
@@ -22,6 +23,16 @@ def create_log_handler(name):
     # add the handlers to the logger
     LOG.addHandler(fh)
     LOG.addHandler(ch)
-
     return LOG
 
+
+def write_log(log, msg, thread='main', **kwargs):
+    try:
+        string = 'Thread: {}| msg: {}|'.format(thread, msg)
+        if kwargs is not None:
+            for key, value in kwargs.items():
+                string = string + ' {}: {}'.format(key, value)
+        log(string)
+    except:
+        print('logging error')
+        traceback.print_exc()

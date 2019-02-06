@@ -1,3 +1,4 @@
+import unittest
 from unittest import TestCase
 
 from market.Worker import Worker
@@ -29,3 +30,8 @@ class TestMarket(TestCase):
         market.workers[0].health_check()
         self.assertEqual(market.workers[0].health.browser, HealthConstants().browser)
         self.assertEqual(market.workers[0].health.webcrawler, HealthConstants().webCrawler)
+
+
+if __name__ == '__main__':
+    unittest.main()
+

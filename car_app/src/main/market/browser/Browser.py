@@ -1,13 +1,16 @@
 from time import time
+
 from docker.errors import APIError, ImageNotFound
 from src.main.market.utils.BrowserConstants import BrowserConstants
 import logging as LOG
 import docker
 
+from utils.LogGenerator import write_log
+
 
 class Browser:
 
-    def __init__(self, name, batch_number):
+    def __init__(self, name, port, batch_number):
         """
         Begins a browser container
         :type name: string
@@ -18,25 +21,25 @@ class Browser:
         self.batch_number = batch_number
         self.name = name
         self.client = docker.client.from_env()
-        self.port = BrowserConstants().base_port + batch_number
+        self.port = port
         try:
             self.browser = self.client.containers.run(BrowserConstants().browser_image,
                                                       detach=True,
-                                                      name='browser-%s-%s' % (name, batch_number),
+                                                      name='browser-{}-{}-{}'.format(name, batch_number, self.port),
                                                       ports={'4444/tcp': self.port})
         except ImageNotFound as e:
-            LOG.error("Couldn't find image for hub status: %s", e.explanation)
+            write_log(LOG.error, thread=self.batch_number, msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
             raise e
         except APIError as e:
             if e.status_code == 409:
-                self.browser = self.client.containers.get('browser-%s-%s' % (name, batch_number))
+                self.browser = self.client.containers.get('browser-{}-{}-{}'.format(self.name, batch_number, self.port))
                 try:
                     self.browser.restart()
                 except:
-                    LOG.error("Couldn't start browser image on port %s : %s \n  %s", str(self.port), e.status_code, e.explanation)
+                    write_log(LOG.error, thread=self.batch_number, msg="couldn't start browser image", port=self.port, status_code=e.status_code, exception=e.explanation)
                     return
             if e.status_code == 500:
-                LOG.error("Tried to start browser but couldn't Could be that the port %s", str(self.port))
+                write_log(LOG.error, thread=self.batch_number, msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
                 raise e
         self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
 
@@ -61,22 +64,23 @@ class Browser:
             self.browser.restart()
             self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
         except APIError:
-            LOG.warning("Couldn't restart container. Killing it")
+            write_log(LOG.warning,thread=self.batch_number, msg="Couldn't restart container. Killing it")
             try:
                 self.browser.remove()
                 self.__init__(self.name, self.batch_number)
             except APIError as e:
-                LOG.warning("Couldn't remove container %s after failing to restart it: %s", self.name, e.explanation)
+                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
     # TODO handle RemoteDisconnected
     def quit(self):
         try:
             self.browser.kill()
+            self.wait_for_log(self.browser, 'Shutdown')
         except APIError as e:
-            LOG.warning("Couldn't quit container %s problem was: %s", self.name, e.explanation)
+            write_log(LOG.warning,msg="Couldn't quit container %s problem was: %s", thread=self.batch_number, explanation=e.explanation)
         try:
             self.browser.remove()
         except APIError as e:
-            LOG.warning("Failed to remove container %s problem was: %s", self.name, e.explanation)
+            write_log(LOG.warning, msg="failed to remove container", thread=self.batch_number, explanation=e.explanation)
 
     def health_indicator(self):
         try:

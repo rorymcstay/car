@@ -218,6 +218,7 @@ class WebCrawler:
                 self.next_page(attempts)
             except TimeoutException:
                 LOG.warning("Next page did not load as expected")
+            self.update_latest_page()
             return
         else:
             raise MaxAttemptsReached()
@@ -228,7 +229,7 @@ class WebCrawler:
             if button.text.upper() == self.Market.next_button_text.upper():
                 return button
 
-    def update_latest_page(self, wait):
+    def update_latest_page(self, wait=WebCrawlerConstants().click_timeout):
         """Updates the latest pages and stores it in the WebCrawler.last_result field and updates history"""
         wait = time() + wait
         origin_called = self.last_result

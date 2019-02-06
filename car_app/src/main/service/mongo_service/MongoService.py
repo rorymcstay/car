@@ -38,7 +38,7 @@ class MongoService:
         id = hashlib.sha3_224(name.encode('utf-8')).hexdigest()
         id = id[:24]
         market_definition['_id'] = ObjectId(id)
-        self.market_details_collection.insert(market_definition)
+        self.market_details_collection.replace_one({'_id': ObjectId(id)}, market_definition)
 
     def insert(self, car, batch_number='Main'):
         """
