@@ -36,6 +36,12 @@ class TestWebCrawler(TestCase):
         car = market.webCrawler.get_raw_car()
         self.assertEqual(car, DoneDealRawCar)
 
+    def doCleanups(self, market=DoneDeal):
+        market.browser.quit()
+        for w in market.workers:
+            w.clean_up()
+
+
 if __name__ == '__main__':
     unittest.main()
 

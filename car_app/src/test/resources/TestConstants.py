@@ -1,11 +1,14 @@
 import os
 import docker
 
+from market.utils.BrowserConstants import get_open_port
+from market.utils.MongoServiceConstants import MongoServiceConstants
+
 client=docker.client.from_env()
 
+
 class TestConstants:
-    def __init__(self):
-        self.mongo_port = 27000
-        self.browser_port = os.getenv('TEST_BROWSER_PORT', '4444')
-        self.browser_host = os.getenv('TEST_LOCALHOST', 'localhost')
-        self.mongo_image= client.images.get(os.getenv('MONGO_IMAGE', 'mongo'))
+    def __init__(self, mongo_port):
+        self.mongo_name = 'test_mongo_{}'.format(mongo_port)
+        self.browser_host = os.getenv('LOCALHOST', 'localhost')
+        self.mongo_image = client.images.get(os.getenv('MONGO_IMAGE', 'mongo'))

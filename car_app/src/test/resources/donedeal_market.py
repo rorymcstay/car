@@ -1,15 +1,18 @@
 from market.utils.BrowserConstants import get_open_port
+from market.utils.MongoServiceConstants import MongoServiceConstants
 from resources.TestConstants import TestConstants
 from src.main.market.Market import Market
 from src.main.market.mapping.Mappers import mappers
 from src.main.market.crawling.Routers import routes
 
 import docker.client
-
+mongo_port = get_open_port()
 client=docker.client.from_env()
-client.containers.run(TestConstants().mongo_image, detach=True,
-                      name='test_mongo',
-                      ports={'27017/tcp' : TestConstants().mongo_port})
+client.containers.run(TestConstants(mongo_port).mongo_image, detach=True,
+                      name=TestConstants(mongo_port).mongo_name,
+                      ports={'27017/tcp': mongo_port},
+                      environment=['MONGO_INITDB_ROOT_USERNAME=root',
+                                   'MONGO_INITDB_ROOT_PASSWORD=root'])
 
 market = Market(name='test_donedeal',
                 result_css=".card__body",
@@ -23,7 +26,7 @@ market = Market(name='test_donedeal',
                 mapper=mappers['_donedeal_mapper'],
                 next_button_text="Next",
                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
-                remote=True, port=get_open_port())
+                remote=True, browser_port=get_open_port(), mongo_port=mongo_port)
 
 next_page_expectation = [
     "https://www.donedeal.co.uk/cars?sort=publishdate%20desc"

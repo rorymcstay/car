@@ -5,7 +5,11 @@ from src.main.market.utils.BrowserConstants import BrowserConstants
 import logging as LOG
 import docker
 
-from utils.LogGenerator import write_log
+from utils.LogGenerator import write_log, LogGenerator
+
+import logging as log
+
+LOG = LogGenerator(log, name='browser')
 
 
 class Browser:
@@ -27,6 +31,7 @@ class Browser:
                                                       detach=True,
                                                       name='browser-{}-{}-{}'.format(name, batch_number, self.port),
                                                       ports={'4444/tcp': self.port})
+            write_log(LOG.info, msg='starting_browser', thread=self.batch_number)
         except ImageNotFound as e:
             write_log(LOG.error, thread=self.batch_number, msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
             raise e

@@ -1,3 +1,4 @@
+import os
 import traceback
 
 import numpy
@@ -6,19 +7,21 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+
+from market.utils.MongoServiceConstants import MongoServiceConstants
 from market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.market.persistence.Persistence import Persistence
-from src.main.market.utils.BrowserConstants import BrowserConstants
+from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.service.mongo_service.MongoService import MongoService
-from src.main.utils.LogGenerator import create_log_handler, write_log
+from src.main.utils.LogGenerator import LogGenerator, write_log
+import logging as log
 
-LOG = create_log_handler('market')
-
+LOG = LogGenerator(log, name='market')
 
 class Market:
 
@@ -27,7 +30,7 @@ class Market:
                  result_exclude,
                  wait_for_car,
                  json_identifier,
-                 next_page_xpath, result_stub, mapper, router, next_button_text, port, remote=False):
+                 next_page_xpath, result_stub, mapper, router, next_button_text, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
         """
         Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
         the specific details of the webpage source.
@@ -44,7 +47,8 @@ class Market:
         :param next_button_text:
         :param remote:
         """
-        self.port = port
+        self.mongo_port = mongo_port
+        self.port = browser_port
         self.browsers = []
         self.workers = []
         self.result_stub = result_stub
@@ -61,7 +65,9 @@ class Market:
         self.mapper = mapper
         self.home = router
 
-        self.service = MongoService()
+        self.mongoConstants = MongoServiceConstants()
+        self.mongo_host = '{}:{}'.format(os.getenv('MONGO_HOST', '0.0.0.0'), self.mongo_port)
+        self.service = MongoService(self.mongo_host)
         self.busy = False
 
         if remote is False:
@@ -69,7 +75,8 @@ class Market:
             return
         # starting dedicated browser container
         self.browser = Browser(self.name, batch_number='main', port=self.port)
-        self.webCrawler = WebCrawler(self, 'http://{}:{}/wd/hub'.format(BrowserConstants().host, self.port))
+        self.browser_host='http://{}:{}/wd/hub'.format(BrowserConstants().host, self.port)
+        self.webCrawler = WebCrawler(self, self.browser_host)
 
         self.persistence = Persistence(self)
         self.persistence.save_market_details()
@@ -81,7 +88,7 @@ class Market:
         """
         x = 0
         while self.busy:
-            LOG.info("Page:%s", str(x))
+            write_log(LOG.info, msg='new_page', page=x)
             if single is None:
                 queue = self.webCrawler.get_queue_range()
             else:
@@ -149,7 +156,6 @@ class Market:
             write_log(LOG.debug, msg="workers have started", page=page)
             results = self.webCrawler.get_result_array()
             batches = numpy.array_split(results, min(max_containers, len(results)))
-            self.garbage_collection()
             write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), page_size=len(results))
             for (w, b) in zip(self.workers, batches):
                 w.prepare_batch(b)
@@ -164,6 +170,7 @@ class Market:
             page += 1
             write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page))
             self.persistence.save_progress()
+            self.garbage_collection()
 
     def get_cars_collected(self):
         """ returns the number of cars collected """

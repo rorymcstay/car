@@ -3,12 +3,12 @@ from unittest import TestCase
 
 from market.Worker import Worker
 from market.utils.HealthConstants import HealthConstants
-from resources.donedeal_market import market
+from resources.donedeal_market import market as DoneDeal
 
 
 class TestMarket(TestCase):
 
-    def test_garbage_collection(self):
+    def test_garbage_collection(self, market=DoneDeal):
         """This test when an exception is thrown, the resources are stopped"""
 
         '''When we run three threads'''
@@ -30,6 +30,11 @@ class TestMarket(TestCase):
         market.workers[0].health_check()
         self.assertEqual(market.workers[0].health.browser, HealthConstants().browser)
         self.assertEqual(market.workers[0].health.webcrawler, HealthConstants().webCrawler)
+
+    def doCleanups(self, market=DoneDeal):
+        market.browser.quit()
+        for w in market.workers:
+            w.clean_up()
 
 
 if __name__ == '__main__':

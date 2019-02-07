@@ -1,5 +1,4 @@
 import json
-import logging as LOG
 import re
 from time import time, sleep
 import traceback
@@ -25,6 +24,10 @@ from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  ResultCollectionFailure,
                                                  MaxAttemptsReached)
 
+from src.main.utils.LogGenerator import LogGenerator, write_log
+import logging as log
+
+LOG = LogGenerator(log, name='webcrawler')
 
 class WebCrawler:
 
@@ -33,7 +36,6 @@ class WebCrawler:
         :type remote: Container
         :type market: Market
         """
-        LOG.getLogger('WebCrawler %s' % market.name)
         self.Market = market
         self.number_of_pages = None
         self.last_result = self.Market.home
@@ -46,7 +48,7 @@ class WebCrawler:
             arguments = ['--headless']
             self.chrome_options = Options()
             self.chrome_options.add_argument(arguments)
-            LOG.info('Local driver initiated for %s', self.Market.name)
+            write_log(LOG.info, msg='local driver initiated', name=self.Market.name)
         else:
             url = remote
             LOG.debug("Starting remote driver for %s", market.name)
@@ -56,7 +58,7 @@ class WebCrawler:
                                            desired_capabilities=DesiredCapabilities.CHROME,
                                            options=options)
 
-            LOG.info('Remote driver initiated for %s running on %s', self.Market.name, url)
+            write_log(LOG.info,msg='remote driver initiated', webdriver_host=url)
         self.driver.set_window_size(1120, 900)
         self.history = []
 
@@ -80,13 +82,11 @@ class WebCrawler:
                                           if (isinstance(node, ast.Assign) and
                                               node.left.to_ecma() == self.Market.json_identifier))
                     raw_car = json.loads(script_objects.to_ecma())
-                    LOG.debug("Found raw car json object %s ", self.Market.json_identifier)
+                    write_log(LOG.debug,msg='found raw car', url=self.driver.current_url)
                     out.append(raw_car)
             if len(out) == 0:
-                ResultCollectionFailure(self.driver.current_url, "Nothing found here")
-                LOG.error("Could not find json_identifier = %s at %s",
-                          self.Market.json_identifier,
-                          self.driver.current_url)
+                ResultCollectionFailure(self.driver.current_url, "Nothing found here", exception=None)
+                write_log(LOG.debug, msg='could not find raw car', url=self.driver.current_url)
                 return False
         except Exception as e:
             raise ResultCollectionFailure(self.driver.current_url, None, e)
@@ -108,9 +108,9 @@ class WebCrawler:
             WebDriverWait(self.driver, timeout).until(element_present)
             return True
         except StaleElementReferenceException as e:
-            LOG.warning("couldn't click on %s: \n  %s", item.text, e.msg)
+            write_log(LOG.warning, msg="click failure", button=item.text, exception=e.msg)
             traceback.print_exc()
-            raise e
+            return False
         except WebDriverException:
             return False
 
@@ -122,7 +122,7 @@ class WebCrawler:
         try:
             queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
         except NoSuchElementException as e:
-            LOG.error('Failed to find result items at %s: \n    %s', self.driver.current_url, e.msg)
+            write_log(LOG.error,msg='failed to find results', url=self.driver.current_url, exception=e.msg)
             raise QueueServicingError(url=self.driver.current_url,
                                       reason="NoSuchElementException",
                                       exception=e,
@@ -189,8 +189,7 @@ class WebCrawler:
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            LOG.warning("returning to latest page - %s did not load as expected or unusually slowly- Could not find %s",
-                     self.driver.current_url, self.Market.result_css)
+            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(self.Market.result_css), url=self.driver.current_url)
             return True
 
     def next_page(self, attempts=0):

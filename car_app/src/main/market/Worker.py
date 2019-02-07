@@ -12,17 +12,20 @@ from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.market.utils.HealthStatus import HealthStatus
-from src.main.utils.LogGenerator import create_log_handler, write_log
 from src.main.service.mongo_service.MongoService import MongoService
 
-LOG = create_log_handler('worker')
+import logging as log
+
+from utils.LogGenerator import LogGenerator, write_log
+
+LOG = LogGenerator(log, name='worker')
 
 
 class Worker:
     def __init__(self, batch_number, market, remote=False):
         self.cars_collected = 0
         self.thread = None
-        self.mongo = MongoService()
+        self.mongo = MongoService(market.mongo_host)
         self.batch_number = batch_number
         self.port = get_open_port()
         self.market = market
@@ -39,22 +42,32 @@ class Worker:
         try:
             self.health_check()
             for url in results:
+                scanned=0
+                scraped=0
                 self.webCrawler.driver.get(url)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
+                scanned=scanned+1
+                write_log(LOG.info, msg='', thread=self.batch_number, scanned=scanned)
                 if rawCar is False:
-                    LOG.warning("Thread-%s: Failed-%s", self.batch_number, url)
+
+                    write_log(LOG.warning, msg="failed", thread=self.batch_number, url=url)
                 else:
+                    scraped=scraped+1
+                    write_log(LOG.info, msg='', thread=self.batch_number, scraped=scraped)
                     self.cars_collected += 1
-                    self.mongo.insert(self.market.mapper(rawCar[0], url))
-                    LOG.info("Thread %s saved their car - %s", self.batch_number, url)
-            LOG.info("Thread %s has finished there batch", self.batch_number)
+                    try:
+                        self.mongo.insert(self.market.mapper(rawCar[0], url))
+                    except (KeyError, AttributeError) as e:
+                        self.health_check(e)
+                        pass
+                    write_log(LOG.info, msg="saved car", thread=self.batch_number, url=url)
+            write_log(LOG.info, msg="finished batch", thread=self.batch_number)
             self.health_check()
         except KeyboardInterrupt as stop:
             self.health_check(stop.args[0])
             self.clean_up()
-            LOG.info("Killing browser %s", self.batch_number)
             raise stop
         except WebDriverException as e:
             try:
@@ -82,9 +95,7 @@ class Worker:
                 self.clean_up()
                 write_log(LOG.error, msg="failed to restart resources - killing thread", thread=self.batch_number)
                 sys.exit()
-        except (KeyError, AttributeError) as e:
-            self.health_check(e)
-            pass
+
 
     def prepare_batch(self, results=None):
         self.thread = threading.Thread(target=self.get_results, args=([results]),

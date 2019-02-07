@@ -1,5 +1,4 @@
 import hashlib
-import logging as LOG
 import threading
 
 import pymongo
@@ -7,6 +6,11 @@ import json
 from bson import json_util, ObjectId
 from src.main.car.Domain import CarType
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
+import logging as log
+
+from utils.LogGenerator import LogGenerator, write_log
+
+LOG = LogGenerator(log, name='mongo')
 
 
 class MongoService:
@@ -19,9 +23,8 @@ class MongoService:
     in a terminal
     """
 
-    def __init__(self):
+    def __init__(self, host):
         max_delay = MongoServiceConstants().TIMEOUT
-        host = MongoServiceConstants().HOST
         username = MongoServiceConstants().USERNAME
         password = MongoServiceConstants().PASSWORD
         self.client = pymongo.MongoClient(host=host,
@@ -49,7 +52,8 @@ class MongoService:
         id = hashlib.sha224(car['adDetails']['url'].encode('utf-8')).hexdigest()
         id = id[:24]
         carType = CarType(car['carDetails']['make'], car['carDetails']['model'])
-        updateCar = threading.Thread(carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION]), car['adDetails']['year'])
+        updateCar = threading.Thread(
+            carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION], car['adDetails']['year']))
         updateCar.start()
         car['_id'] = ObjectId(id)
         car_search = self.cars.find({"_id": car['_id']})
@@ -66,10 +70,10 @@ class MongoService:
             except KeyError:
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
             x = self.cars.replace_one({'_id': car['_id']}, car)
-        LOG.info("Thread-%s: Request to write %s to database returned %s",
-                 batch_number,
-                 car['adDetails']['url'],
-                 x.acknowledged)
+        write_log(LOG.info, msg="write car to database",
+                  thread=batch_number,
+                  url=car['adDetails']['url'],
+                  result=x.acknowledged )
         return
 
     def read(self, query):
@@ -94,6 +98,3 @@ class MongoService:
                 json.dump(page_sanitized, outfile)
         else:
             return page_sanitized
-
-
-service = MongoService()
