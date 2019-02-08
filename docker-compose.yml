@@ -29,8 +29,7 @@ services:
     build: "./car_app"
     volumes:
       - ./car_app/src:/home/src
-      - ./car_app/out:/home/out
-      - log-volume:/home/out
+      - log-volume:/home/out/
       - /var/run/docker.sock:/var/run/docker.sock # mount the docker.sock to allow this container to control daemon
     depends_on:
       - mongo
@@ -59,8 +58,8 @@ services:
       - influxdb
     volumes:
       - ./car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
       - log-volume:/var/log/car_app/
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana

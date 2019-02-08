@@ -8,8 +8,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from market.utils.MongoServiceConstants import MongoServiceConstants
-from market.utils.WebCrawlerConstants import WebCrawlerConstants
+from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
+from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.market.persistence.Persistence import Persistence
 from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.market.Worker import Worker

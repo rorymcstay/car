@@ -16,7 +16,7 @@ from src.main.service.mongo_service.MongoService import MongoService
 
 import logging as log
 
-from utils.LogGenerator import LogGenerator, write_log
+from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='worker')
 
@@ -24,6 +24,8 @@ LOG = LogGenerator(log, name='worker')
 class Worker:
     def __init__(self, batch_number, market, remote=False):
         self.cars_collected = 0
+        self.scanned=0
+        self.scraped=0
         self.thread = None
         self.mongo = MongoService(market.mongo_host)
         self.batch_number = batch_number
@@ -42,28 +44,26 @@ class Worker:
         try:
             self.health_check()
             for url in results:
-                scanned=0
-                scraped=0
                 self.webCrawler.driver.get(url)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
-                scanned=scanned+1
-                write_log(LOG.info, msg='', thread=self.batch_number, scanned=scanned)
+                self.scanned=self.scanned+1
+                write_log(LOG.info, msg='', thread=self.batch_number, scanned=self.scanned)
                 if rawCar is False:
 
                     write_log(LOG.warning, msg="failed", thread=self.batch_number, url=url)
                 else:
-                    scraped=scraped+1
-                    write_log(LOG.info, msg='', thread=self.batch_number, scraped=scraped)
-                    self.cars_collected += 1
+                    self.scraped=self.scraped+1
+                    write_log(LOG.info, msg='have_raw_car', thread=self.batch_number,scraped=self.scraped)
                     try:
                         self.mongo.insert(self.market.mapper(rawCar[0], url))
                     except (KeyError, AttributeError) as e:
                         self.health_check(e)
                         pass
-                    write_log(LOG.info, msg="saved car", thread=self.batch_number, url=url)
-            write_log(LOG.info, msg="finished batch", thread=self.batch_number)
+                    self.cars_collected += 1
+                    write_log(LOG.info, msg="saved", thread=self.batch_number, collected=self.cars_collected)
+            write_log(LOG.info, msg="finished_batch", thread=self.batch_number)
             self.health_check()
         except KeyboardInterrupt as stop:
             self.health_check(stop.args[0])
@@ -74,7 +74,7 @@ class Worker:
                 self.health_check(e.msg)
                 traceback.print_exc()
                 self.webCrawler = WebCrawler(self.market, remote=self.make_url())
-                write_log(LOG.info, thread=self.batch_number, msg="restarted webCrawler")
+                write_log(LOG.info, thread=self.batch_number, msg="restarted_webCrawler")
             except Exception as e:
                 self.health_check(e.args[0])
                 traceback.print_exc()
@@ -95,7 +95,6 @@ class Worker:
                 self.clean_up()
                 write_log(LOG.error, msg="failed to restart resources - killing thread", thread=self.batch_number)
                 sys.exit()
-
 
     def prepare_batch(self, results=None):
         self.thread = threading.Thread(target=self.get_results, args=([results]),

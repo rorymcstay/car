@@ -5,7 +5,7 @@ from src.main.market.utils.BrowserConstants import BrowserConstants
 import logging as LOG
 import docker
 
-from utils.LogGenerator import write_log, LogGenerator
+from src.main.utils.LogGenerator import write_log, LogGenerator
 
 import logging as log
 

@@ -7,8 +7,7 @@ from bson import json_util, ObjectId
 from src.main.car.Domain import CarType
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 import logging as log
-
-from utils.LogGenerator import LogGenerator, write_log
+from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='mongo')
 

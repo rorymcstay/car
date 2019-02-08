@@ -1,9 +1,6 @@
 import os
 import docker
 
-from market.utils.BrowserConstants import get_open_port
-from market.utils.MongoServiceConstants import MongoServiceConstants
-
 client=docker.client.from_env()
 
 

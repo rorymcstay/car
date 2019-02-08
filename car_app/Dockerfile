@@ -1,13 +1,13 @@
 FROM python:3
 
-RUN mkdir -p /home/src
+RUN mkdir -p /home
 
 WORKDIR /home
 
 # Copying over necessary files
-COPY src/main src/
-COPY src/entrypoints ./entrypoints/StartService.py
-COPY src/entrypoints ./entrypoints/DoneDealFeed.py
+COPY src ./src
+COPY src/entrypoints ./src/entrypoints/
+COPY __init__.py ./
 COPY requirements.txt ./
 
 # The following is to install numpy
@@ -21,4 +21,4 @@ RUN pip install -U pip
 RUN pip install -r ./requirements.txt
 
 # Entrypoint
-CMD ["python", "./entrypoints/DoneDealFeed.py" ]
+CMD ["python", "./src/entrypoints/DoneDealFeed.py" ]

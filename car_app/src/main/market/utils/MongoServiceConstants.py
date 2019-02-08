@@ -1,7 +1,5 @@
 import os
 
-from market.utils.BrowserConstants import get_open_port
-
 
 class MongoServiceConstants(object):
     def __init__(self):

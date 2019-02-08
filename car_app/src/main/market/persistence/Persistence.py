@@ -6,7 +6,7 @@ from bson import ObjectId
 
 import logging as log
 
-from utils.LogGenerator import LogGenerator, write_log
+from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='persistence')
 

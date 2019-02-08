@@ -1,5 +1,4 @@
-from market.utils.BrowserConstants import get_open_port
-from market.utils.MongoServiceConstants import MongoServiceConstants
+from src.main.market.utils.BrowserConstants import get_open_port
 from resources.TestConstants import TestConstants
 from src.main.market.Market import Market
 from src.main.market.mapping.Mappers import mappers

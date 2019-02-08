@@ -228,18 +228,10 @@ class WebCrawler:
             if button.text.upper() == self.Market.next_button_text.upper():
                 return button
 
-    def update_latest_page(self, wait=WebCrawlerConstants().click_timeout):
+    def update_latest_page(self):
         """Updates the latest pages and stores it in the WebCrawler.last_result field and updates history"""
-        wait = time() + wait
-        origin_called = self.last_result
-        while time() < wait:
-            self.last_result = None
-            if origin_called == self.driver.current_url:
-                pass
-            self.last_result = self.driver.current_url
-            return
-        self.last_result = origin_called
-        self.history.append(origin_called)
+        self.last_result = self.driver.current_url
+        self.history.append(self.last_result)
 
     def get_result_array(self):
         content = self.driver.page_source
