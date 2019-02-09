@@ -114,3 +114,9 @@ Get methods allow users to retrive information on cars. This can either be
     http://localhost/api/data/since=7days/car_make/car_model
 
 URL methods
+
+# Deploying to AWS:
+get the login to aws container repository
+
+        (aws ecr get-login --no-include-email --region us-west-2)
+

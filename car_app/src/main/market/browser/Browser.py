@@ -1,13 +1,14 @@
 from time import time
 
 from docker.errors import APIError, ImageNotFound
+
 from src.main.market.utils.BrowserConstants import BrowserConstants
-import logging as LOG
 import docker
 
 from src.main.utils.LogGenerator import write_log, LogGenerator
 
 import logging as log
+
 
 LOG = LogGenerator(log, name='browser')
 

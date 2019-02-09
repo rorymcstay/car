@@ -19,7 +19,7 @@ market = Market(name='donedeal',
                 mapper=mappers['_donedeal_mapper'],
                 next_button_text="Next",
                 result_stub='https://www.donedeal.co.uk/cars-for-sale/',
-                remote='http://0.0.0.0:5444/wd/hub', mongo_port=27017, browser_port=4444)
+                remote='http://34.214.147.39:4444/wd/hub', mongo_port=27017, browser_port=4444)
 
 if __name__ == '__main__':
     market.webCrawler.driver.get(market.home)

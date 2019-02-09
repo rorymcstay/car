@@ -4,6 +4,7 @@ services:
 
   mongo:
     image: mongo
+    container_name: mongo
     restart: always
     ports:
       - "27017:27017"
@@ -11,36 +12,18 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
     command: mongod
-    networks:
-    - app
-
-  mongo-express:
-    image: mongo-express
-    restart: always
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: root
-    networks:
-      - app
 
   car-feed:
     image: car-feed
-    build: "./car_app"
+    build: "../car_app"
     volumes:
-      - ./car_app/src:/home/src
-      - ./aws_deployment/car-browsers:/home/car-browsers
+      - ../car_app/src:/home/src
+      - /car-browser:/home/car-browser # copy files to connect to aws docker daemon
       - log-volume:/home/out/
-      - /var/run/docker.sock:/var/run/docker.sock # mount the docker.sock to allow this container to control daemon
-    depends_on:
-      - mongo
     ports:
       - "5001:5001"
     env_file:
-      - car_app/docker.properties.env
-    networks:
-      - app
+      - task_configurations/docker.properties.env
 
   influxdb:
     image: influxdb:latest
@@ -51,7 +34,18 @@ services:
     - "8090:8090"
     - "25826:25826/udp"
     env_file:
-    - env.influxdb
+    - task_configurations/env.influxdb
+
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    ports:
+    - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
 
   telegraf:
     image: telegraf:latest
@@ -59,21 +53,19 @@ services:
     links:
       - influxdb
     volumes:
-      - ./car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ./car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
+      - ../car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ../car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
       - log-volume:/var/log/car_app/
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
     env_file:
-      - env.influxdb
+      - task_configurations/env.influxdb
     links:
       - influxdb
 
 volumes:
   log-volume:
-networks:
-  app:
-    driver: bridge

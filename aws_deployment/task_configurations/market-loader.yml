@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  car-feed:
+    image: car-images/car-feed
+      - log-volume:/home/out/
+    ports:
+      - "5001:5001"
+    env_file:
+      - docker.properties.env
+
+  telegraf:
+    image: car-images/influxdb
+    volumes:
+    - ./car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    - ./car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
+    - log-volume:/var/log/car_app/
+
+volumes:
+  log-volume:
