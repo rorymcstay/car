@@ -2,6 +2,9 @@ from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
 from src.main.market.mapping.Mappers import mappers
 
+from pyfiglet import Figlet
+custom_fig = Figlet(font='graffiti')
+print(custom_fig.renderText('DoneDealPumper'))
 
 market = Market(name='donedeal',
                 result_css=".card__body",

@@ -1,3 +1,4 @@
+pyfiglet
 numpy
 requests
 flask
