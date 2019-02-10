@@ -1,8 +1,9 @@
 version: '3'
 
 services:
-  car-feed:
-    image: car-images/car-feed
+  carfeed:
+    image: car-images/car-feed:latest
+    volumes:
       - log-volume:/home/out/
     ports:
       - "5001:5001"
@@ -10,11 +11,11 @@ services:
       - docker.properties.env
 
   telegraf:
-    image: car-images/influxdb
+    image: car-images/telgraf:latest
     volumes:
-    - ./car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-    - ./car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
-    - log-volume:/var/log/car_app/
+      - log-volume:/var/log/car_app/
 
 volumes:
   log-volume:
+
+
