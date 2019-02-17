@@ -78,8 +78,16 @@ class Worker:
                         car = self.market.mapper(rawCar[0], url)
                         self.mongoService.insert_car(car=car, batch_number=self.batch_number)
                     except (KeyError, AttributeError) as e:
-                        write_log(LOG.warning, "saving_error", thread=self.batch_number, time=time()-start, scraped=scraped,
+                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time()-start, scraped=scraped,
                                   scanned=scanned, collected=self.cars_collected)
+                        failedRaw=rawCar[0]
+                        failedRaw['_id']=make_id(url)
+                        try:
+                            self.mongoService.db['{}_rawCar'.format(self.market.name)].insert_one(failedRaw)
+                            write_log(LOG.info, thread=self.batch_number, msg="saved_raw_car")
+                        except Exception:
+                            write_log(LOG.warning, "saving_error", thread=self.batch_number, time=time()-start, scraped=scraped,
+                                      scanned=scanned, collected=self.cars_collected)
                         traceback.print_exc()
                         self.health_check(e)
                         continue

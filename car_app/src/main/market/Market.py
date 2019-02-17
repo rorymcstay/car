@@ -159,6 +159,7 @@ class Market:
         self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
         page = 1
         try:
+            total=0
             while self.busy:
                 threadStart=time()
                 write_log(LOG.debug, msg="workers have started", page=page)
@@ -176,7 +177,9 @@ class Market:
                 write_log(LOG.debug, msg="all_threads_returned")
                 self.webCrawler.update_latest_page()
                 page += 1
-                write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page),
+                this_batch = self.get_cars_collected() - total
+                total = self.get_cars_collected()
+                write_log(LOG.info, msg='threads_finished', collected=-this_batch, total_collected=total, page=str(page),
                           time=time()-threadStart)
                 self.persistence.save_progress()
                 self.garbage_collection()
