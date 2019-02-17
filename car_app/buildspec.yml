@@ -14,7 +14,7 @@ phases:
     commands:
     - echo Build started on `date`
     - echo Building the Docker image...
-    - docker build -t car-feed:latest
+    - docker build -t car-feed:latest .
     - docker tag car-feed:latest $REPOSITORY_URI:$IMAGE_TAG
   post_build:
     commands:
