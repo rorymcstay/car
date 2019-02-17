@@ -26,7 +26,7 @@ class CarDetails:
 
 
 class CarType:
-    def __init__(self, make, model, year = None):
+    def __init__(self, make, model, year=None):
         self.make = make
         self.model = model
         self.year = year
