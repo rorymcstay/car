@@ -158,6 +158,10 @@ class Worker:
         id = make_id(result)
         x = self.mongoService.cars.find_one(dict(_id=id))
         if x is None:
-            return result
+            y = self.mongoService.db['{}_rawCar'.format(self.market.name)].find_one(dict(_id=id))
+            if y is None:
+                return result
+            else:
+                pass
         else:
             pass
