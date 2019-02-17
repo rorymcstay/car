@@ -27,7 +27,12 @@ class Persistence:
                     'latest_result_page': self.market.webCrawler.driver.current_url,
                     'latest_processing': [w.webCrawler.driver.current_url for w in self.market.workers],
                     'time_stamp': str(datetime.utcnow())}
-        self.client.db['progress'].replace_one({'_id': ObjectId(id)}, progress)
+
+        x = self.client.db['progress'].find_one({'_id': ObjectId(id)})
+        if x is None:
+            self.client.db['progress'].insert_one(progress)
+        else:
+            self.client.db['progress'].replace_one({'_id': ObjectId(id)}, progress)
 
     def return_to_previous(self):
         """ goes to the last visited page and then traverses until one of the latest results is in its queue """
