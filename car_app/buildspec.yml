@@ -15,13 +15,12 @@ phases:
     - echo Build started on `date`
     - echo Building the Docker image...
     - docker build -t car-feed:latest ./car_app
-    - docker tag car-feed:latest $REPOSITORY_URI:$IMAGE_TAG
+    - docker tag car-feed:latest $REPOSITORY_URI:latest
   post_build:
     commands:
     - echo Build completed on `date`
     - echo Pushing the Docker images...
     - docker push $REPOSITORY_URI:latest
-    - docker push $REPOSITORY_URI:$IMAGE_TAG
 artifacts:
   files:
   - imageDetail.json
