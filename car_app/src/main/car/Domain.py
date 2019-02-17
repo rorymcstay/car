@@ -118,24 +118,20 @@ class Car:
         :param adPhotos:
         """
         self._id = make_id(adDetails.url)
-        self.adDetails = adDetails.__dict__()
-        self.carDetails = carDetails.__dict__
+        self.adDetails = adDetails
+        self.carDetails = carDetails
         self.adDescription = adDescription
         self.adPhotos = adPhotos
 
     def __dict__(self):
-        return dict(_id=self._id, adDetaisl=self.adDetails, carDetails=self.carDetails,
+        return dict(_id=self._id, adDetaisl=self.adDetails.__dict__(), carDetails=self.carDetails.__dict__,
                     adDescription=self.adDescription, adPhotos=self.adPhotos)
 
-    def getId(self):
-        """
-        :rtype: ObjectId
-        """
+    def getId(self) -> ObjectId:
         return self._id
 
-    def getCarDetails(self):
-        """
+    def getAdDetails(self) -> AdDetails:
+        return self.adDetails
 
-        :rtype: CarDetails
-        """
+    def getCarDetails(self) -> CarDetails:
         return self.carDetails

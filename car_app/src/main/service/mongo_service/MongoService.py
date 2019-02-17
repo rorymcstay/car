@@ -47,7 +47,7 @@ class MongoService:
         else:
             self.market_details_collection.replace_one({'_id': ObjectId(id)}, market_definition)
 
-    def insert_car(self, car: Car, batch_number='Main'):
+    def insert_or_update_car(self, car: Car, batch_number='Main'):
         """
         Insert a car into the database after generating an oid from the url. This ensures uniqueness of items in collection
         :param batch_number: who called
@@ -60,9 +60,19 @@ class MongoService:
             x = self.cars.insert_one(car.__dict__())
         else:
             write_log(LOG.info, msg="rewriting car")
-            x = car_search['adDetails']['previousPrices'].append(car.getCarDetails().year)
-            self.cars.update_one(dict(_id=car.getId()), car.__dict__())
+            x = car_search['adDetails']['previousPrices'].append(car.getAdDetails().previousPrices)
+            self.cars.update_one(dict(_id=car.getId()), x)
 
+        write_log(LOG.info, msg="inserted_car",
+                  thread=batch_number,
+                  url=car.getAdDetails().url,
+                  time=time()-start,
+                  result=x.acknowledged)
+        return
+
+    def insert_car(self, car: Car, batch_number='Main'):
+        start = time()
+        x = self.cars.insert_one(car.__dict__())
         write_log(LOG.info, msg="inserted_car",
                   thread=batch_number,
                   url=car,

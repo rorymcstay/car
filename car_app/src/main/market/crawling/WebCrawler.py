@@ -1,31 +1,31 @@
 import json
+import logging as log
 import re
-from time import time, sleep
 import traceback
+from time import time, sleep
+
 import selenium.webdriver as webdriver
+from bs4 import BeautifulSoup
 from selenium.common.exceptions import (TimeoutException,
                                         StaleElementReferenceException,
                                         NoSuchElementException, WebDriverException)
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-from bs4 import BeautifulSoup
 from urllib3.exceptions import MaxRetryError
 
-from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  EndOfQueueNotification,
                                                  QueueServicingError,
                                                  ResultCollectionFailure,
                                                  MaxAttemptsReached)
-
+from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
-import logging as log
 
 LOG = LogGenerator(log, name='webcrawler')
 
@@ -89,7 +89,9 @@ class WebCrawler:
                 write_log(LOG.debug, msg='could not find raw car', url=self.driver.current_url)
                 return False
         except Exception as e:
-            raise ResultCollectionFailure(self.driver.current_url, None, e)
+            traceback.print_exc()
+            error = ResultCollectionFailure(self.driver.current_url, None, e)
+            raise error
         return out
 
     def safely_click(self, item, wait_for, selector, timeout=3):
@@ -234,9 +236,11 @@ class WebCrawler:
         self.history.append(self.last_result)
 
     def get_result_array(self):
+        start = time()
         content = self.driver.page_source
         cars = []
         cars.extend(re.findall(r'' + self.Market.result_stub + '[^\"]+', content))
+        write_log(LOG.debug, msg="parsed_result_array", length=len(cars), time=time()-start)
         return list(set(cars))
 
     def retrace_steps(self, x):

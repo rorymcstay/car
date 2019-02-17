@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import traceback
-from time import sleep
+from time import sleep, time
 
 import numpy
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -129,7 +129,7 @@ class Market:
                         try:
                             car = self.mapper(rawCar, raw_cars['url'])
                             write_log(LOG.debug, msg='saving_result', url=self.webCrawler.driver.current_url)
-                            self.service.insert_car(car)
+                            self.service.insert_or_update_car(car)
                             # TODO handle fails when saving to the database in MongoService
                             write_log(LOG.debug, msg='saved_result', url=self.webCrawler.driver.current_url)
                         except Exception as e:
@@ -160,6 +160,7 @@ class Market:
         page = 1
         try:
             while self.busy:
+                threadStart=time()
                 write_log(LOG.debug, msg="workers have started", page=page)
                 results = self.webCrawler.get_result_array()
                 batches = numpy.array_split(results, min(max_containers, len(results)))
@@ -175,7 +176,8 @@ class Market:
                 write_log(LOG.debug, msg="all_threads_returned")
                 self.webCrawler.update_latest_page()
                 page += 1
-                write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page))
+                write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page),
+                          time=time()-threadStart)
                 self.persistence.save_progress()
                 self.garbage_collection()
         except KeyboardInterrupt:
