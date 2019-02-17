@@ -1,7 +1,7 @@
 import logging
 import datetime
 
-from car.Domain import CarDetails, Location, AdDetails, CarType, make_id
+from src.main.car.Domain import CarDetails, Location, AdDetails, CarType, make_id
 from src.main.market.mapping.mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
 
 
