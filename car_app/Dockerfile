@@ -8,7 +8,7 @@ WORKDIR /home
 COPY src ./src
 COPY src/entrypoints ./src/entrypoints
 
-COPY requirements.txt .
+COPY requirements.txt ./requirements.txt
 
 # The following is to install numpy
 RUN apt-get dist-upgrade
