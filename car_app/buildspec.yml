@@ -8,11 +8,12 @@ phases:
     - AWS_DEFAULT_REGION=us-east-1
     - $(aws ecr get-login --no-include-email --region us-east-1)
     - REPOSITORY_URI=064106913348.dkr.ecr.us-east-1.amazonaws.com/car-feed
+    - cd car_app
   build:
     commands:
     - echo Build started on `date`
     - echo Building the Docker image...
-    - docker build -t car-feed ./car_app
+    - docker build -t car-feed .
     - docker tag car-feed:latest $REPOSITORY_URI:latest
   post_build:
     commands:
