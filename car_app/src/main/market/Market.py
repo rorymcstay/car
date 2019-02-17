@@ -179,7 +179,7 @@ class Market:
                 page += 1
                 this_batch = self.get_cars_collected() - total
                 total = self.get_cars_collected()
-                write_log(LOG.info, msg='threads_finished', collected=-this_batch, total_collected=total, page=str(page),
+                write_log(LOG.info, msg='threads_finished', collected=this_batch, total_collected=total, page=str(page),
                           time=time()-threadStart)
                 self.persistence.save_progress()
                 self.garbage_collection()
