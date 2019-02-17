@@ -34,9 +34,10 @@ class Persistence:
         try:
             id = hashlib.sha3_224(self.market.name.encode('utf-8')).hexdigest()
             id = id[:24]
-            x = self.client['progress'].find_one({'_id': ObjectId(id)})
+            x = self.client.db['progress'].find_one({'_id': ObjectId(id)})
             progress = json.loads(x)
         except Exception:
+            traceback.print_exc()
             write_log(LOG.warning, msg="Failed to load latest progress - returning to home")
             self.market.webCrawler.driver.get(self.market.home)
             return

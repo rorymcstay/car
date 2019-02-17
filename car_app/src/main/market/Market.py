@@ -1,5 +1,7 @@
 import os
+import sys
 import traceback
+from time import sleep
 
 import numpy
 import threading
@@ -23,6 +25,7 @@ import logging as log
 
 LOG = LogGenerator(log, name='market')
 
+
 class Market:
 
     def __init__(self, name,
@@ -30,7 +33,10 @@ class Market:
                  result_exclude,
                  wait_for_car,
                  json_identifier,
-                 next_page_xpath, result_stub, mapper, router, next_button_text, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
+                 next_page_xpath,
+                 result_stub,
+                 mapper,
+                 router, next_button_text, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
         """
         Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
         the specific details of the webpage source.
@@ -73,7 +79,7 @@ class Market:
         if remote is False:
             self.webCrawler = WebCrawler(self)
             return
-        # starting dedicated browser container
+        # starting dedicated browser containercf
         self.browser = Browser(self.name, batch_number='main', port=self.port)
         self.browser_host='http://{}:{}/wd/hub'.format(BrowserConstants().host, self.port)
         self.webCrawler = WebCrawler(self, self.browser_host)
@@ -152,25 +158,42 @@ class Market:
         latest_results = self.webCrawler.get_result_array()
         self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
         page = 1
-        while self.busy:
-            write_log(LOG.debug, msg="workers have started", page=page)
-            results = self.webCrawler.get_result_array()
-            batches = numpy.array_split(results, min(max_containers, len(results)))
-            write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), page_size=len(results))
-            for (w, b) in zip(self.workers, batches):
-                w.prepare_batch(b)
-            self.webCrawler.next_page()
+        try:
+            while self.busy:
+                write_log(LOG.debug, msg="workers have started", page=page)
+                results = self.webCrawler.get_result_array()
+                batches = numpy.array_split(results, min(max_containers, len(results)))
+                write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), page_size=len(results))
+                for (w, b) in zip(self.workers, batches):
+                    w.prepare_batch(b)
+                self.webCrawler.next_page()
 
-            write_log(LOG.info, msg="starting_threads")
-            [t.thread.start() for t in self.workers]
-            [t.thread.join() for t in self.workers]
+                write_log(LOG.info, msg="starting_threads")
+                [t.thread.start() for t in self.workers]
+                [t.thread.join() for t in self.workers]
 
-            write_log(LOG.debug, msg="all_threads_returned")
-            self.webCrawler.update_latest_page()
-            page += 1
-            write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page))
-            self.persistence.save_progress()
-            self.garbage_collection()
+                write_log(LOG.debug, msg="all_threads_returned")
+                self.webCrawler.update_latest_page()
+                page += 1
+                write_log(LOG.info, msg='threads_finished', collected=self.get_cars_collected(), page=str(page))
+                self.persistence.save_progress()
+                self.garbage_collection()
+        except KeyboardInterrupt:
+            self.browser.quit()
+            self.tear_down_workers()
+            sys.exit(1)
+        except Exception as e:
+            self.browser.quit()
+            traceback.print_exc()
+            sys.exit(1)
+
+    def tear_down_workers(self):
+        self.busy = False
+        for w in self.workers:
+            w.stop = True
+        sleep(5)
+        for w in self.workers:
+            w.browser.quit()
 
     def get_cars_collected(self):
         """ returns the number of cars collected """

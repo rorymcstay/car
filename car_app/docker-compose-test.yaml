@@ -2,7 +2,7 @@ version: '3.2'
 
 services:
 
-  test_mongo:
+  test-mongo:
     image: mongo
     restart: always
     ports:
@@ -23,8 +23,8 @@ services:
     command:
       - ['python', 'unittest', '--start-directory', './src/test', '--pattern', 'test*.py']
     depends_on:
-      - mongo
+      - test-mongo
     env_file:
-      - test.docker.env
+      - src/test/test.docker.env
     networks:
       - app

@@ -23,6 +23,7 @@ LOG = LogGenerator(log, name='worker')
 
 class Worker:
     def __init__(self, batch_number, market, remote=False):
+        self.stop = True
         self.cars_collected = 0
         self.scanned=0
         self.scraped=0
@@ -35,6 +36,10 @@ class Worker:
         self.browser = Browser(market.name, batch_number=self.batch_number, port=self.port)
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
+    def prepare_batch(self, results=None):
+        self.thread = threading.Thread(target=self.get_results, args=([results]),
+                                       name='Thread %s' % str(self.batch_number))
+
     #   TODO the worker should write to Mongo in batches
     def get_results(self, results):
         """
@@ -44,6 +49,8 @@ class Worker:
         try:
             self.health_check()
             for url in results:
+                if self.stop is False:
+                    return
                 self.webCrawler.driver.get(url)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
@@ -51,24 +58,20 @@ class Worker:
                 self.scanned=self.scanned+1
                 write_log(LOG.info, msg='', thread=self.batch_number, scanned=self.scanned)
                 if rawCar is False:
-
                     write_log(LOG.warning, msg="failed", thread=self.batch_number, url=url)
                 else:
-                    self.scraped=self.scraped+1
+                    self.scraped += 1
                     write_log(LOG.info, msg='have_raw_car', thread=self.batch_number,scraped=self.scraped)
                     try:
                         self.mongo.insert(self.market.mapper(rawCar[0], url))
                     except (KeyError, AttributeError) as e:
+                        write_log(LOG.warning, "couldn't save car", thread=self.browser)
                         self.health_check(e)
                         pass
                     self.cars_collected += 1
                     write_log(LOG.info, msg="saved", thread=self.batch_number, collected=self.cars_collected)
             write_log(LOG.info, msg="finished_batch", thread=self.batch_number)
             self.health_check()
-        except KeyboardInterrupt as stop:
-            self.health_check(stop.args[0])
-            self.clean_up()
-            raise stop
         except WebDriverException as e:
             try:
                 self.health_check(e.msg)
@@ -80,7 +83,7 @@ class Worker:
                 traceback.print_exc()
                 self.clean_up()
                 write_log(LOG.error, thread=self.batch_number, msg="failed to restart webCrawler")
-                sys.exit()
+                sys.exit(1)
         except APIError as e:
             try:
                 self.health_check(e.status_code)
@@ -94,11 +97,9 @@ class Worker:
                 traceback.print_exc()
                 self.clean_up()
                 write_log(LOG.error, msg="failed to restart resources - killing thread", thread=self.batch_number)
-                sys.exit()
+                sys.exit(1)
 
-    def prepare_batch(self, results=None):
-        self.thread = threading.Thread(target=self.get_results, args=([results]),
-                                       name='Thread %s' % str(self.batch_number))
+
 
     def make_url(self):
         if self.remote is False:
@@ -106,7 +107,7 @@ class Worker:
         host = BrowserConstants().host
         # host = self.browser.browser.name
         post_fix = BrowserConstants().client_connect
-        return "http://%s:%s/%s" % (host, self.port, post_fix)
+        return "http://{}:{}/{}".format(host, self.port, post_fix)
 
     def health_check(self, exception=Exception('None')):
         try:
@@ -121,7 +122,6 @@ class Worker:
     def clean_up(self):
         self.browser.quit()
         write_log(LOG.info, thread=self.batch_number, msg="cleaning up")
-        self.webCrawler.quit()
 
     def regenerate(self):
         self.browser = Browser(self.market.name, self.batch_number)

@@ -32,12 +32,22 @@ class CarType:
         self.year = year
         self._id = make_id('{}:{}'.format(make, model))
 
+    def __dict__(self):
+        return {'_id': self._id, 'make': self.make, 'model': self.model, 'year': self.year}
+
     def update_car_type(self, collection, year):
+        """
+
+        :type collection: Collection
+        """
         x = collection.find_one({'_id': self._id})
+        if x is None:
+            collection.insert_one(self.__dict__())
+            return
         if x['years'] is not None:
             x['years'].append(int(year))
-        else:
-            x['years'] = [int(year)]
+            collection.update_one({'_id': self._id}, x)
+            return
 
 
 class AdDetails:
@@ -58,3 +68,19 @@ class Location:
         self.county = county
         self.postcode = postcode
 
+
+class MarketDeatils:
+    def __init__(self, name,
+                 result_css,
+                 result_exclude,
+                 wait_for_car,
+                 json_identifier,
+                 next_page_xpath,
+                 result_stub):
+        self.name = name
+        self.result_css = result_css
+        self.result_exclude = result_exclude
+        self.wait_for_car = wait_for_car
+        self.json_identifier = json_identifier
+        self.next_page_xpath = next_page_xpath
+        self.result_stub = result_stub

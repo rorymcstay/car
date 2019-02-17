@@ -52,13 +52,14 @@ class MongoService:
         id = id[:24]
         carType = CarType(car['carDetails']['make'], car['carDetails']['model'])
         updateCar = threading.Thread(
-            carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION], car['adDetails']['year']))
+            carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION], car['carDetails']['year']))
         updateCar.start()
         car['_id'] = ObjectId(id)
         car_search = self.cars.find({"_id": car['_id']})
         if car_search.count() == 0:
             x = self.cars.insert_one(car)
         else:
+            write_log(LOG.info, msg="rewriting car")
             car_before_list = []
             for i in car_search:
                 car_before_list.append(i)
@@ -66,7 +67,7 @@ class MongoService:
             try:
                 car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(
                     car_before['adDetails']['price'])
-            except KeyError:
+            except (KeyError, AttributeError):
                 car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
             x = self.cars.replace_one({'_id': car['_id']}, car)
         write_log(LOG.info, msg="write car to database",

@@ -6,9 +6,10 @@ WORKDIR /home
 
 # Copying over necessary files
 COPY src ./src
-COPY src/entrypoints ./src/entrypoints/
-COPY __init__.py ./
-COPY requirements.txt ./
+COPY src/entrypoints ./src/entrypoints
+COPY aws_deployment/car-browsers ./car-browsers
+
+COPY requirements.txt .
 
 # The following is to install numpy
 RUN apt-get dist-upgrade

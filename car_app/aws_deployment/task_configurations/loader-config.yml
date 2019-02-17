@@ -14,4 +14,4 @@ run_params:
       - subnet-e7c4baac
       security_groups:
       -  sg-08d9b464377ab8cd2
-      assign_public_ip: ENABLED
+      assign_public_ip: DISABLED

@@ -1,4 +1,5 @@
-from time import time
+import os
+from time import time, sleep
 
 from docker.errors import APIError, ImageNotFound
 
@@ -25,13 +26,15 @@ class Browser:
 
         self.batch_number = batch_number
         self.name = name
+
         self.client = docker.client.from_env()
         self.port = port
         try:
             self.browser = self.client.containers.run(BrowserConstants().browser_image,
                                                       detach=True,
                                                       name='browser-{}-{}-{}'.format(name, batch_number, self.port),
-                                                      ports={'4444/tcp': self.port})
+                                                      ports={'4444/tcp': self.port},
+                                                      remove=True)
             write_log(LOG.info, msg='starting_browser', thread=self.batch_number)
         except ImageNotFound as e:
             write_log(LOG.error, thread=self.batch_number, msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
@@ -41,6 +44,7 @@ class Browser:
                 self.browser = self.client.containers.get('browser-{}-{}-{}'.format(self.name, batch_number, self.port))
                 try:
                     self.browser.restart()
+                    sleep(5)
                 except:
                     write_log(LOG.error, thread=self.batch_number, msg="couldn't start browser image", port=self.port, status_code=e.status_code, exception=e.explanation)
                     return
@@ -63,7 +67,7 @@ class Browser:
                 if partial_url in line:
                     LOG.debug(line)
                     return line.split(' ')[-1]
-        raise TimeoutError("Timed out waiting for %s to start on port %s" % (self.browser.short_id, str(self.port)))
+        write_log(LOG.warning, msg="container_start_timeout", id=self.browser.short_id, port=self.port)
 
     def restart(self):
         try:
@@ -80,7 +84,6 @@ class Browser:
     def quit(self):
         try:
             self.browser.kill()
-            self.wait_for_log(self.browser, 'Shutdown')
         except APIError as e:
             write_log(LOG.warning,msg="Couldn't quit container %s problem was: %s", thread=self.batch_number, explanation=e.explanation)
         try:

@@ -1,9 +1,10 @@
-version: '3.2'
+version: '2'
 
 services:
 
   mongo:
     image: mongo
+    container_name: mongo
     restart: always
     ports:
       - "27017:27017"
@@ -11,36 +12,32 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
     command: mongod
-    networks:
-    - app
 
   mongo-express:
     image: mongo-express
+    container_name: mongo-express
     restart: always
+    depends_on:
+      - mongo
     ports:
       - "8081:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
-    networks:
-      - app
 
   car-feed:
     image: car-feed
+    container_name: car-feed
     build: "./car_app"
     volumes:
-      - ./car_app/src:/home/src
-      - ./aws_deployment/car-browsers:/home/car-browsers
+      - /var/run/docker.sock:/var/run/docker.sock
       - log-volume:/home/out/
-      - /var/run/docker.sock:/var/run/docker.sock # mount the docker.sock to allow this container to control daemon
     depends_on:
       - mongo
     ports:
       - "5001:5001"
     env_file:
       - car_app/docker.properties.env
-    networks:
-      - app
 
   influxdb:
     image: influxdb:latest
@@ -56,12 +53,16 @@ services:
   telegraf:
     image: telegraf:latest
     container_name: telegraf
-    links:
+
+    depends_on:
       - influxdb
     volumes:
-      - ./car_app/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ./car_app/patterns.conf:/etc/telegraf/patterns.conf:ro
-      - log-volume:/var/log/car_app/
+      - ./car_app/telegraf/patterns.conf:/etc/telegraf/patterns.conf:ro
+      - ./car_app/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./car_app/telegraf/supervisord.conf:/etc/telegraf/supervisord.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - log-volume:/var/log/car_app:ro
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -69,11 +70,11 @@ services:
       - "3000:3000"
     env_file:
       - env.influxdb
-    links:
+    depends_on:
       - influxdb
+    volumes:
+      - ./car_app/grafana:/var/lib/grafana/
 
 volumes:
   log-volume:
-networks:
-  app:
-    driver: bridge
+  patterns:

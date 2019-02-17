@@ -6,5 +6,5 @@ while IFS= read -r line; do
 done < <( docker-compose config --services )
 
 for image in "${images[@]}"; do
-    aws ecr create-repository --repository-name car-images/$image --profile car_app
+    aws ecr create-repository --repository-name $image --profile car_app --region us-east-1
 done
