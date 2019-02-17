@@ -75,7 +75,7 @@ class MongoService:
         x = self.cars.insert_one(car.__dict__())
         write_log(LOG.info, msg="inserted_car",
                   thread=batch_number,
-                  url=car,
+                  url=car.getAdDetails().url,
                   time=time()-start,
                   result=x.acknowledged)
         return
