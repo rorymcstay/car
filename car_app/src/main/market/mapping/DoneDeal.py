@@ -1,7 +1,7 @@
-import logging
 import datetime
+import logging
 
-from src.main.car.Domain import CarDetails, Location, AdDetails, CarType, make_id
+from src.main.car.Domain import CarDetails, Location, AdDetails, CarType, Car
 from src.main.market.mapping.mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
 
 
@@ -77,7 +77,5 @@ def DoneDeal(car_old, url):
     adPhotos = get_photos_in_a_list('photos', 'large', car_old)
     logging.debug("Mapped donedeal car succesfully")
 
-    car = dict(_id=make_id(url), adDetails=adDetails, carDetails=carDetails, adDescription=adDescription,
-               adPhotos=adPhotos)
-
+    car = Car(adDetails, carDetails, adDescription, adPhotos)
     return car

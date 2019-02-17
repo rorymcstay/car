@@ -1,12 +1,13 @@
 import hashlib
-import threading
+import json
+import logging as log
+from time import time
 
 import pymongo
-import json
 from bson import json_util, ObjectId
-from src.main.car.Domain import CarType
+
+from src.main.car.Domain import Car
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
-import logging as log
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='mongo')
@@ -46,38 +47,27 @@ class MongoService:
         else:
             self.market_details_collection.replace_one({'_id': ObjectId(id)}, market_definition)
 
-    def insert(self, car, batch_number='Main'):
+    def insert_car(self, car: Car, batch_number='Main'):
         """
         Insert a car into the database after generating an oid from the url. This ensures uniqueness of items in collection
-        :param car:
+        :param batch_number: who called
+        :param car: car to insert
         :return:
         """
-        id = hashlib.sha224(car['adDetails']['url'].encode('utf-8')).hexdigest()
-        id = id[:24]
-        carType = CarType(car['carDetails']['make'], car['carDetails']['model'])
-        updateCar = threading.Thread(
-            carType.update_car_type(self.db[MongoServiceConstants().CAR_TYPE_COLLECTION], car['carDetails']['year']))
-        updateCar.start()
-        car['_id'] = ObjectId(id)
-        car_search = self.cars.find({"_id": car['_id']})
-        if car_search.count() == 0:
-            x = self.cars.insert_one(car)
+        start = time()
+        car_search = self.cars.find_one(dict(_id=car.getId()))
+        if car_search is None:
+            x = self.cars.insert_one(car.__dict__())
         else:
             write_log(LOG.info, msg="rewriting car")
-            car_before_list = []
-            for i in car_search:
-                car_before_list.append(i)
-            car_before = car_before_list[0]
-            try:
-                car['adDetails']['previousPrices'] = car_before['adDetails']['previousPrices'].append(
-                    car_before['adDetails']['price'])
-            except (KeyError, AttributeError):
-                car['adDetails']['previousPrices'] = [car_before['adDetails']['price']]
-            x = self.cars.replace_one({'_id': car['_id']}, car)
-        write_log(LOG.info, msg="write car to database",
+            x = car_search['adDetails']['previousPrices'].append(car.getCarDetails().year)
+            self.cars.update_one(dict(_id=car.getId()), car.__dict__())
+
+        write_log(LOG.info, msg="inserted_car",
                   thread=batch_number,
-                  url=car['adDetails']['url'],
-                  result=x.acknowledged )
+                  url=car,
+                  time=time()-start,
+                  result=x.acknowledged)
         return
 
     def read(self, query):

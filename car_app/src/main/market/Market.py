@@ -1,27 +1,27 @@
+import logging as log
 import os
 import sys
+import threading
 import traceback
 from time import sleep
 
 import numpy
-import threading
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
-from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
-from src.main.market.persistence.Persistence import Persistence
-from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
-from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
-from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
+from src.main.market.crawling.WebCrawler import WebCrawler
+from src.main.market.persistence.Persistence import Persistence
+from src.main.market.utils.BrowserConstants import BrowserConstants
+from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
+from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
+from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
-import logging as log
 
 LOG = LogGenerator(log, name='market')
 
@@ -129,7 +129,7 @@ class Market:
                         try:
                             car = self.mapper(rawCar, raw_cars['url'])
                             write_log(LOG.debug, msg='saving_result', url=self.webCrawler.driver.current_url)
-                            self.service.insert(car)
+                            self.service.insert_car(car)
                             # TODO handle fails when saving to the database in MongoService
                             write_log(LOG.debug, msg='saved_result', url=self.webCrawler.driver.current_url)
                         except Exception as e:

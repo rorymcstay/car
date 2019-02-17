@@ -1,16 +1,19 @@
 import hashlib
 import json
+import logging as log
 import traceback
 from datetime import datetime
+
 from bson import ObjectId
 
-import logging as log
-
+from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='persistence')
 
 class Persistence:
+    client: MongoService
+
     def __init__(self, market):
         self.market = market
         self.client = market.service

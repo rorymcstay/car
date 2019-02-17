@@ -1,21 +1,20 @@
+import logging as log
 import sys
 import threading
 import traceback
+from time import time
 
 from docker.errors import APIError
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.market.utils.HealthStatus import HealthStatus
 from src.main.service.mongo_service.MongoService import MongoService
-
-import logging as log
-
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='worker')
@@ -49,6 +48,7 @@ class Worker:
         try:
             self.health_check()
             for url in results:
+                start = time()
                 if self.stop is False:
                     return
                 self.webCrawler.driver.get(url)
@@ -59,17 +59,21 @@ class Worker:
                 write_log(LOG.info, msg='', thread=self.batch_number, scanned=self.scanned)
                 if rawCar is False:
                     write_log(LOG.warning, msg="failed", thread=self.batch_number, url=url)
+                    continue
                 else:
                     self.scraped += 1
-                    write_log(LOG.info, msg='have_raw_car', thread=self.batch_number,scraped=self.scraped)
+                    write_log(LOG.info, msg='have_raw_car', thread=self.batch_number, scraped=self.scraped)
                     try:
-                        self.mongo.insert(self.market.mapper(rawCar[0], url))
+                        car=self.market.mapper(rawCar[0], url)
+                        self.mongo.insert_car(car=car, batch_number=self.batch_number)
                     except (KeyError, AttributeError) as e:
-                        write_log(LOG.warning, "couldn't save car", thread=self.browser)
+                        write_log(LOG.warning, "saving_error", thread=self.batch_number)
+                        traceback.print_exc()
                         self.health_check(e)
-                        pass
+                        continue
                     self.cars_collected += 1
-                    write_log(LOG.info, msg="saved", thread=self.batch_number, collected=self.cars_collected)
+                    elapsed = time() - start
+                    write_log(LOG.info, msg="saved_car", thread=self.batch_number, time=elapsed)
             write_log(LOG.info, msg="finished_batch", thread=self.batch_number)
             self.health_check()
         except WebDriverException as e:

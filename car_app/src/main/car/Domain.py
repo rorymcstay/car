@@ -3,14 +3,17 @@ import hashlib
 from bson import ObjectId
 
 
-def make_id(string):
+def make_id(string) -> ObjectId:
     id = hashlib.sha3_224(string.encode('utf-8')).hexdigest()
     id = id[:24]
     return ObjectId(id)
 
 
 class CarDetails:
-    def __init__(self, make, model, year, color, mileage, owners, engineCapacity, engineType, fuelType, bodyStyle, numberDoors):
+    _id: ObjectId
+
+    def __init__(self, make, model, year, color, mileage, owners, engineCapacity, engineType, fuelType, bodyStyle,
+                 numberDoors):
         self.numberDoors = numberDoors
         self.bodyStyle = bodyStyle
         self.fuelType = fuelType
@@ -22,7 +25,10 @@ class CarDetails:
         self.year = year
         self.model = model
         self.make = make
-        self._id = make_id('{}:{}'.format(make, model))
+        id = make_id('{}:{}'.format(make, model))
+        self._id = id
+
+
 
 
 class CarType:
@@ -34,6 +40,9 @@ class CarType:
 
     def __dict__(self):
         return {'_id': self._id, 'make': self.make, 'model': self.model, 'year': self.year}
+
+    def getId(self) -> ObjectId:
+        return self._id
 
     def update_car_type(self, collection, year):
         """
@@ -50,23 +59,32 @@ class CarType:
             return
 
 
-class AdDetails:
-    def __init__(self, url, dateCreated, special, location, sellerType, price, currency, carType):
-        self.carType = carType
-        self.dateCreated = dateCreated
-        self.special = special
-        self.location = location
-        self.sellerType = sellerType
-        self.price = price
-        self.currency = currency
-        self.url = url
-
-
 class Location:
     def __init__(self, country, county, postcode):
         self.country = country
         self.county = county
         self.postcode = postcode
+
+    def __dict__(self):
+        return dict(country=self.country, county=self.county, postcode=self.postcode)
+
+
+class AdDetails:
+    def __init__(self, url: str, dateCreated: str, special: bool, location: Location, sellerType, price, currency,
+                 carType: CarType):
+        self.carType = carType.__dict__()
+        self.dateCreated = dateCreated
+        self.special = special
+        self.location = location.__dict__()
+        self.sellerType = sellerType
+        self.price = price
+        self.currency = currency
+        self.url = url
+        self.previousPrices = []
+
+    def __dict__(self):
+        return dict(carType=self.carType, dateCreated=self.dateCreated, special=self.special, location=self.location,
+                    price=self.price, currency=self.currency, url=self.url, previousPrices=self.previousPrices)
 
 
 class MarketDeatils:
@@ -84,3 +102,40 @@ class MarketDeatils:
         self.json_identifier = json_identifier
         self.next_page_xpath = next_page_xpath
         self.result_stub = result_stub
+
+
+class Car:
+    _id: ObjectId
+
+    def __init__(self, adDetails: AdDetails, carDetails: CarDetails, adDescription: str, adPhotos: list):
+        """
+
+        :type adDescription: str
+        :type adPhotos: list
+        :param adDetails:
+        :param carDetails:
+        :param adDescription:
+        :param adPhotos:
+        """
+        self._id = make_id(adDetails.url)
+        self.adDetails = adDetails.__dict__()
+        self.carDetails = carDetails.__dict__
+        self.adDescription = adDescription
+        self.adPhotos = adPhotos
+
+    def __dict__(self):
+        return dict(_id=self._id, adDetaisl=self.adDetails, carDetails=self.carDetails,
+                    adDescription=self.adDescription, adPhotos=self.adPhotos)
+
+    def getId(self):
+        """
+        :rtype: ObjectId
+        """
+        return self._id
+
+    def getCarDetails(self):
+        """
+
+        :rtype: CarDetails
+        """
+        return self.carDetails
