@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from src.main.car.Domain import make_id
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
@@ -73,7 +74,7 @@ class Market:
 
         self.mongoConstants = MongoServiceConstants()
         self.mongo_host = '{}:{}'.format(os.getenv('MONGO_HOST', '0.0.0.0'), self.mongo_port)
-        self.service = MongoService(self.mongo_host)
+        self.mongoService = MongoService(self.mongo_host)
         self.busy = False
 
         if remote is False:
@@ -129,7 +130,7 @@ class Market:
                         try:
                             car = self.mapper(rawCar, raw_cars['url'])
                             write_log(LOG.debug, msg='saving_result', url=self.webCrawler.driver.current_url)
-                            self.service.insert_or_update_car(car)
+                            self.mongoService.insert_or_update_car(car)
                             # TODO handle fails when saving to the database in MongoService
                             write_log(LOG.debug, msg='saved_result', url=self.webCrawler.driver.current_url)
                         except Exception as e:
@@ -156,6 +157,7 @@ class Market:
         self.busy = True
         Persistence(self).return_to_previous()
         latest_results = self.webCrawler.get_result_array()
+
         self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
         page = 1
         try:
@@ -163,7 +165,8 @@ class Market:
             while self.busy:
                 threadStart=time()
                 write_log(LOG.debug, msg="workers have started", page=page)
-                results = self.webCrawler.get_result_array()
+                all_results = self.webCrawler.get_result_array()
+                results = [x for x in [self.verify_batch(result) for result in all_results] if x is not None]
                 batches = numpy.array_split(results, min(max_containers, len(results)))
                 write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), page_size=len(results))
                 for (w, b) in zip(self.workers, batches):
@@ -219,3 +222,16 @@ class Market:
             else:
                 worker.clean_up()
                 worker.regenerate()
+
+    def verify_batch(self, result):
+        id = make_id(result)
+        x = self.mongoService.cars.find_one(dict(_id=id))
+        if x is None:
+            y = self.mongoService.db['{}_rawCar'.format(self.market.name)].find_one(dict(_id=id))
+            if y is None:
+                return result
+            else:
+                pass
+        else:
+            pass
+

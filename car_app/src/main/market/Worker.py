@@ -37,10 +37,13 @@ class Worker:
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
     def prepare_batch(self, results=None):
+
         start = time()
-        filtered_results = [x for x in [self.verify_batch(result) for result in results] if x is not None]
+
+
         self.thread = threading.Thread(target=self.get_results, args=([filtered_results]),
                                        name='Thread %s' % str(self.batch_number))
+
         write_log(LOG.info, msg="batch_prepared", thread=self.batch_number, time=time() - start,
                   size=len(filtered_results))
 
@@ -154,14 +157,3 @@ class Worker:
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
         write_log(LOG.info, thread=self.batch_number, msg="restarted resources")
 
-    def verify_batch(self, result):
-        id = make_id(result)
-        x = self.mongoService.cars.find_one(dict(_id=id))
-        if x is None:
-            y = self.mongoService.db['{}_rawCar'.format(self.market.name)].find_one(dict(_id=id))
-            if y is None:
-                return result
-            else:
-                pass
-        else:
-            pass

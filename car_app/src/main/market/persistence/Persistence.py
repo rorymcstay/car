@@ -4,6 +4,7 @@ from datetime import datetime
 
 from bson import ObjectId
 
+from market.Market import Market
 from src.main.car.Domain import make_id
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
@@ -12,12 +13,13 @@ LOG = LogGenerator(log, name='persistence')
 
 
 class Persistence:
+    market: Market
     id: ObjectId
     client: MongoService
 
-    def __init__(self, market):
+    def __init__(self, market: Market):
         self.market = market
-        self.client = market.service
+        self.client = market.mongoService
         self.id = make_id(self.market.name)
 
     def save_market_details(self):

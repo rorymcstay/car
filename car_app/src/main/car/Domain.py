@@ -124,7 +124,7 @@ class Car:
         self.adPhotos = adPhotos
 
     def __dict__(self):
-        return dict(_id=self._id, adDetaisl=self.adDetails.__dict__(), carDetails=self.carDetails.__dict__,
+        return dict(_id=self._id, adDetails=self.adDetails.__dict__(), carDetails=self.carDetails.__dict__,
                     adDescription=self.adDescription, adPhotos=self.adPhotos)
 
     def getId(self) -> ObjectId:
