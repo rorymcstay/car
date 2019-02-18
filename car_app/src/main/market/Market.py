@@ -167,6 +167,7 @@ class Market:
                 write_log(LOG.debug, msg="workers have started", page=page)
                 all_results = self.webCrawler.get_result_array()
                 results = [x for x in [self.verify_batch(result) for result in all_results] if x is not None]
+                self.results=results
                 batches = numpy.array_split(results, min(max_containers, len(results)))
                 write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), size=len(results))
                 for (w, b) in zip(self.workers, batches):
@@ -227,7 +228,7 @@ class Market:
         id = make_id(result)
         x = self.mongoService.cars.find_one(dict(_id=id))
         if x is None:
-            y = self.mongoService.db['{}_rawCar'.format(self.market.name)].find_one(dict(_id=id))
+            y = self.mongoService.db['{}_rawCar'.format(self.name)].find_one(dict(_id=id))
             if y is None:
                 return result
             else:

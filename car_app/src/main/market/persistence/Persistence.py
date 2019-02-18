@@ -1,4 +1,5 @@
 import logging as log
+import os
 import traceback
 from datetime import datetime
 
@@ -29,7 +30,7 @@ class Persistence:
 
         progress = {'_id': self.id,
                     'latest_result_page': self.market.webCrawler.driver.current_url,
-                    'latest_processing': [w.webCrawler.driver.current_url for w in self.market.workers],
+                    'latest_processing': self.market.results,
                     'time_stamp': str(datetime.utcnow())}
 
         x = self.client.db['progress'].find_one({'_id': self.id})
@@ -54,7 +55,7 @@ class Persistence:
         results = self.market.webCrawler.get_result_array()
         try:
             count=0
-            while not any(result in progress['latest_processing'] for result in results):
+            while os.getenv('TRAVERSE', False) and not any(result in progress['latest_processing'] for result in results):
                 self.market.webCrawler.next_page()
                 results_to_check = self.market.webCrawler.get_result_array()
                 if any(result in progress['latest_processing'] for result in results_to_check):
