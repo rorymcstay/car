@@ -4,8 +4,8 @@ from datetime import datetime
 
 from bson import ObjectId
 
-from market.Market import Market
 from src.main.car.Domain import make_id
+from src.main.market.Market import Market
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
 

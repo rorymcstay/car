@@ -34,7 +34,7 @@ def DoneDeal(car_old, url):
     except Exception:
         traceback.print_exc()
         write_log(LOG.warning, msg="CarType mapping error")
-        carType = None
+        carType = {}
 
     try:
         adDetails = AdDetails(
@@ -53,7 +53,7 @@ def DoneDeal(car_old, url):
     except Exception:
         traceback.print_exc()
         write_log(LOG.warning, msg="AdDetails mapping error")
-        adDetails = None
+        adDetails = {}
     try:
         carDetails = CarDetails(make=carType.make, model=carType.model, year=carType.year,
                                 color=car_old['displayAttributes'][index_of_list_where_key_equals("colour",
@@ -95,7 +95,7 @@ def DoneDeal(car_old, url):
     except Exception:
         traceback.print_exc()
         write_log(LOG.warning, msg="CarDetails mapping error")
-        carDetails = None
+        carDetails = {}
 
     try:
         adDescription = car_old['description']
@@ -104,7 +104,7 @@ def DoneDeal(car_old, url):
         traceback.print_exc()
         write_log(LOG.warning, msg="description/photots mapping error")
         adDescription = None
-        adPhotos = None
+        adPhotos = {}
 
     write_log(LOG.info, msg="finished mapping", time=time()-start)
 

@@ -168,7 +168,7 @@ class Market:
                 all_results = self.webCrawler.get_result_array()
                 results = [x for x in [self.verify_batch(result) for result in all_results] if x is not None]
                 batches = numpy.array_split(results, min(max_containers, len(results)))
-                write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), page_size=len(results))
+                write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), size=len(results))
                 for (w, b) in zip(self.workers, batches):
                     w.prepare_batch(b)
                 self.webCrawler.next_page()

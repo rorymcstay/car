@@ -29,6 +29,7 @@ from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='webcrawler')
 
+
 class WebCrawler:
 
     def __init__(self, market, remote=False):
