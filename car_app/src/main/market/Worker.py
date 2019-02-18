@@ -1,4 +1,5 @@
 import logging as log
+import os
 import sys
 import threading
 import traceback
@@ -80,11 +81,14 @@ class Worker:
                     try:
                         car = self.market.mapper(rawCar[0], url)
                         self.mongoService.insert_car(car=car, batch_number=self.batch_number)
+                        # TODO check if any car._keys is None
                     except (KeyError, AttributeError) as e:
                         write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time()-start, scraped=scraped,
                                   scanned=scanned, collected=self.cars_collected)
+                        if os.getenv("SAVE_RAWCAR", "False") == "False":
+                            continue
                         failedRaw=rawCar[0]
-                        failedRaw['_id']=make_id(url)
+                        failedRaw['_id'] = make_id(url)
                         try:
                             self.mongoService.db['{}_rawCar'.format(self.market.name)].insert_one(failedRaw)
                             write_log(LOG.info, thread=self.batch_number, msg="saved_raw_car")

@@ -1,8 +1,8 @@
-from unittest import TestCase
 import unittest
+from unittest import TestCase
 
 from src.main.market.Worker import Worker
-from resources.donedeal_market import market as DoneDeal
+from src.test.resources.donedeal_market import market as DoneDeal
 
 
 class TestWorker(TestCase):
