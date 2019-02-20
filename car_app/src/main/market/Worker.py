@@ -25,7 +25,7 @@ class Worker:
     mongoService: MongoService
 
     def __init__(self, batch_number, market, remote=False):
-        self.error=True
+        self.error = True
         self.stop = True
         self.cars_collected = 0
         self.thread = None
