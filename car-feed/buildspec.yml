@@ -10,7 +10,7 @@ phases:
     - REPOSITORY_URI=064106913348.dkr.ecr.us-east-1.amazonaws.com/car-feed
   build:
     commands:
-    - cd ./car_app
+    - cd ./car-feed
     - echo Build started on `date`
     - echo Building the Docker image...
     - docker build -t car-feed .
