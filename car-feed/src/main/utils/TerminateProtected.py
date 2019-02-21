@@ -30,16 +30,7 @@ class TerminateProtected:
     def __exit__(self, type, value, traceback):
         if self.killed:
             self.market.tear_down_workers()
-            sys.exit(0)
         self.market.browser.quit()
         signal.signal(signal.SIGINT, self.old_sigint)
         signal.signal(signal.SIGTERM, self.old_sigterm)
-
-
-if __name__ == '__main__':
-    print("Try pressing ctrl+c while the sleep is running!")
-    from time import sleep
-    with TerminateProtected():
-        sleep(10)
-        print("Finished anyway!")
-    print("This only prints if there was no sigint or sigterm")
+        sys.exit(0)

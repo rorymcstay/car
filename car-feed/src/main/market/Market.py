@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import traceback
-from time import sleep, time
+from time import time
 
 import numpy
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -203,7 +203,6 @@ class Market:
         for w in self.workers:
             write_log(LOG.info, "tearing down worker {}".format(w.batch_number))
             w.stop = True
-        sleep(5)
         for w in self.workers:
             w.browser.quit()
 

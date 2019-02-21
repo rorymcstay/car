@@ -37,4 +37,4 @@ services:
       - "5001:5001"
     env_file:
       - car-feed/docker.properties.env
-    stop_grace_period: 30s
+    stop_grace_period: 2m
