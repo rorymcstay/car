@@ -37,7 +37,7 @@ def DoneDeal(car_old, url):
         carType = {}
 
     try:
-        if car_old['price']:
+        if car_old['price'] == None:
             price = None
         else:
             price = car_old['price']

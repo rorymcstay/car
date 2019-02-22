@@ -34,7 +34,6 @@ class LogGenerator:
         self.warning = LOG.warning
         self.error = LOG.error
 
-
 def write_log(log, msg, thread='main', **kwargs):
     try:
         string = '-thread: {} -msg: {}'.format(thread, msg)
