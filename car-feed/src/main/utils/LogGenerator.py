@@ -15,7 +15,7 @@ class LogGenerator:
         if not os.path.exists('./out/'):
             os.makedirs('./out/')
         # fh = logging.FileHandler('./out/{}.log'.format(name))
-        fh = RotatingFileHandler('./out/{}.log'.format(name), maxBytes=os.getenv("MAX_LOG_BYTES", 500000),
+        fh = RotatingFileHandler('./out/{}.log'.format(name), maxBytes=int(os.getenv("MAX_LOG_BYTES", 500000)),
                                  backupCount=os.getenv("LOG_BACKUP", 5))
         LOG.addHandler(fh)
         # fh.setLevel(logging.INFO)
