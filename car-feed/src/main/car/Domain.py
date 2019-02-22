@@ -2,6 +2,10 @@ import hashlib
 
 from bson import ObjectId
 
+"""
+Houses the standard car classes to map to
+"""
+
 
 def make_id(string) -> ObjectId:
     id = hashlib.sha3_224(string.encode('utf-8')).hexdigest()

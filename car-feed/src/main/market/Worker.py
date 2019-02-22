@@ -5,7 +5,6 @@ import traceback
 from time import time
 
 from docker.errors import APIError
-from pip._internal.utils.deprecation import deprecated
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -128,7 +127,6 @@ class Worker:
         post_fix = BrowserConstants().client_connect
         return "http://{}:{}/{}".format(host, self.port, post_fix)
 
-    @deprecated
     def health_check(self, exception=Exception('None')):
         try:
             write_log(LOG.info, thread= self.batch_number, msg="doing_health_check")
