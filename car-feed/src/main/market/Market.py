@@ -176,8 +176,10 @@ class Market:
                 self.webCrawler.next_page()
 
                 write_log(LOG.info, msg="starting_threads")
-                [t.thread.start() for t in self.workers]
-                [t.thread.join() for t in self.workers]
+                for t in self.workers:
+                    t.thread.start()
+                for t in self.workers:
+                    t.thread.join()
 
                 write_log(LOG.debug, msg="all_threads_returned")
                 self.webCrawler.update_latest_page()
@@ -195,7 +197,6 @@ class Market:
         except Exception as e:
             self.browser.quit()
             traceback.print_exc()
-            sys.exit(1)
 
     def tear_down_workers(self):
         self.busy = False

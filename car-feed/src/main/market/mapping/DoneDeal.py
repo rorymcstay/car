@@ -37,6 +37,10 @@ def DoneDeal(car_old, url):
         carType = {}
 
     try:
+        if car_old['price']:
+            price = None
+        else:
+            price = car_old['price']
         adDetails = AdDetails(
             url=url,
             dateCreated=now.isoformat(),
@@ -47,11 +51,12 @@ def DoneDeal(car_old, url):
                 postcode="NA"
             ),
             sellerType=car_old['seller']['type'],
-            price=car_old['price'],
+            price=price,
             currency="GBP", carType=carType)
         write_log(LOG.info, msg="mapped adDetails")
     except Exception:
         traceback.print_exc()
+
         write_log(LOG.warning, msg="AdDetails mapping error")
         adDetails = {}
     try:

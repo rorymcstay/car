@@ -5,6 +5,7 @@ import traceback
 from time import time
 
 from docker.errors import APIError
+from pip._internal.utils.deprecation import deprecated
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -96,11 +97,12 @@ class Worker:
                         self.health_check(e)
                         continue
                     self.cars_collected += 1
-                    write_log(LOG.info, msg="saved_car", thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time()-start, scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
             write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time()-batchTime, scraped=scraped,
                       scanned=scanned, collected=self.cars_collected)
-            self.health_check()
+            if os.getenv("HEALTH_CHECK", False):
+                self.health_check()
         except WebDriverException as e:
             self.health_check(e.msg)
             traceback.print_exc()
@@ -126,8 +128,10 @@ class Worker:
         post_fix = BrowserConstants().client_connect
         return "http://{}:{}/{}".format(host, self.port, post_fix)
 
+    @deprecated
     def health_check(self, exception=Exception('None')):
         try:
+            write_log(LOG.info, thread= self.batch_number, msg="doing_health_check")
             self.health = HealthStatus(exception,
                                        browser=self.browser.health_indicator(),
                                        webcrawler=self.webCrawler.health_indicator())
@@ -143,6 +147,7 @@ class Worker:
         write_log(LOG.info, thread=self.batch_number, msg="cleaning up")
 
     def regenerate(self):
-        self.browser = Browser(self.market.name, self.batch_number)
+        self.port = get_open_port()
+        self.browser = Browser(self.market.name, self.port, self.batch_number)
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
         write_log(LOG.info, thread=self.batch_number, msg="restarted resources")

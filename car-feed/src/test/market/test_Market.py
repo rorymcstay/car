@@ -1,9 +1,9 @@
 import unittest
 from unittest import TestCase
 
-from market.Worker import Worker
-from market.utils.HealthConstants import HealthConstants
-from resources.donedeal_market import market as DoneDeal
+from src.main.market.Worker import Worker
+from src.main.market.utils.HealthConstants import HealthConstants
+from src.test.resources.donedeal_market import market as DoneDeal
 
 
 class TestMarket(TestCase):
