@@ -53,7 +53,6 @@ class Worker:
 
         try:
             batchTime=time()
-            self.health_check()
             scanned = 0
             scraped = 0
             for url in results:
@@ -92,25 +91,21 @@ class Worker:
                         except Exception:
                             write_log(LOG.warning, "saving_error", thread=self.batch_number, time=time()-start, scraped=scraped,
                                       scanned=scanned, collected=self.cars_collected)
-                        traceback.print_exc()
-                        self.health_check(e)
+                            traceback.print_exc()
                         continue
                     self.cars_collected += 1
                     write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time()-start, scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
             write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time()-batchTime, scraped=scraped,
                       scanned=scanned, collected=self.cars_collected)
-            if os.getenv("HEALTH_CHECK", True):
-                self.health_check()
+
         except WebDriverException as e:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)
-            self.health_check(e.msg)
             traceback.print_exc()
             self.webCrawler = WebCrawler(self.market, remote=self.make_url())
             write_log(LOG.info, thread=self.batch_number, msg="restarted_webCrawler")
         except APIError as e:
             write_log(LOG.error, msg="docker_api_error", thread=self.batch_number)
-            self.health_check(e.status_code)
             traceback.print_exc()
             self.clean_up()
             traceback.print_exc()

@@ -4,7 +4,7 @@ from time import time, sleep
 import docker
 from docker.errors import APIError, ImageNotFound
 
-from src.main.market.utils.BrowserConstants import BrowserConstants
+from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
 from src.main.utils.LogGenerator import write_log, LogGenerator
 
 LOG = LogGenerator(log, name='browser')
@@ -72,10 +72,10 @@ class Browser:
         except APIError:
             write_log(LOG.warning,thread=self.batch_number, msg="Couldn't restart container. Killing it")
             try:
+                self.port = get_open_port()
                 self.browser.remove()
-                self.__init__(self.name, self.batch_number)
-            except APIError as e:
-                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
+                self.__init__(self.name, self.port, self.batch_number)
+            except APIError as e:                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
     # TODO handle RemoteDisconnected
     def quit(self):
         try:

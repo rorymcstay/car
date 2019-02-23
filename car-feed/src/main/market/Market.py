@@ -189,7 +189,6 @@ class Market:
                 write_log(LOG.info, msg='threads_finished', collected=this_batch, total_collected=total, page=str(page),
                           time=time()-threadStart)
                 self.persistence.save_progress()
-                self.garbage_collection()
         except KeyboardInterrupt:
             self.browser.quit()
             self.tear_down_workers()
@@ -218,7 +217,6 @@ class Market:
         """
         write_log(log=LOG.debug, msg='starting_garbage_collection')
         for worker in self.workers:
-            worker.health_check()
             if worker.health.exception == 'None':
                 pass
             elif any(isinstance(ignore, type(worker.health.exception)) for ignore in IgnoredExceptions().ignore):
