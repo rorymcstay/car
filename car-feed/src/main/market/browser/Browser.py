@@ -75,8 +75,10 @@ class Browser:
                 self.port = get_open_port()
                 self.browser.remove()
                 self.__init__(self.name, self.port, self.batch_number)
-            except APIError as e:                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
+            except APIError as e:
+                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
     # TODO handle RemoteDisconnected
+
     def quit(self):
         try:
             self.browser.kill()
