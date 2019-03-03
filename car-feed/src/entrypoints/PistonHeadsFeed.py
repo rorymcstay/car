@@ -10,14 +10,14 @@ from src.main.utils.TerminateProtected import TerminateProtected
 custom_fig = Figlet(font='graffiti')
 print(custom_fig.renderText('DoneDealPumper'))
 
-market = Market(name='donedeal',
-                result_css=".card__body",
-                result_exclude="Compare, compare, insurance, Insurance".split(','),
-                wait_for_car=".cad-header",
+market = Market(name='pistonheads',
+                result_css=".para-less",
+                result_exclude=[],
+                wait_for_car=".theImage",
                 json_identifier="window.adDetails",
                 next_page_xpath="//*[@id]",
-                router=routes['_donedeal_router'](make=os.getenv('CAR_MAKE', None),
-                                                  model=os.getenv('CAR_MODEL', None),
+                router=routes['_donedeal_router'](make=None,
+                                                  model=None,
                                                   sort="publishdate%20desc"),
                 mapper=mappers['_donedeal_mapper'],
                 next_button_text="Next",
