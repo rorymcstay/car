@@ -19,6 +19,6 @@ def internal_error(exception):
     print(traceback.format_exc())
     return traceback.format_exc()
 
-print(app.url_mapew)
+print(app.url_map)
 
 app.run()

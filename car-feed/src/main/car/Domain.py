@@ -32,9 +32,6 @@ class CarDetails:
         id = make_id('{}:{}'.format(make, model))
         self._id = id
 
-
-
-
 class CarType:
     def __init__(self, make, model, year=None):
         self.make = make
@@ -61,7 +58,6 @@ class CarType:
             x['years'].append(int(year))
             collection.update_one({'_id': self._id}, x)
             return
-
 
 class Location:
     def __init__(self, country, county, postcode):
@@ -91,14 +87,15 @@ class AdDetails:
                     price=self.price, currency=self.currency, url=self.url, previousPrices=self.previousPrices)
 
 
-class MarketDeatils:
+class MarketDetails:
     def __init__(self, name,
                  result_css,
                  result_exclude,
                  wait_for_car,
                  json_identifier,
                  next_page_xpath,
-                 result_stub):
+                 result_stub, next_button_text):
+        self.next_button_text = next_button_text
         self.name = name
         self.result_css = result_css
         self.result_exclude = result_exclude

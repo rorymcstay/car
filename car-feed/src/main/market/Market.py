@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from src.main.car.Domain import make_id
+from src.main.car.Domain import make_id, MarketDetails
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
@@ -29,15 +29,9 @@ LOG = LogGenerator(log, name='market')
 
 class Market:
 
-    def __init__(self, name,
-                 result_css,
-                 result_exclude,
-                 wait_for_car,
-                 json_identifier,
-                 next_page_xpath,
-                 result_stub,
+    def __init__(self, marketDetails: MarketDetails,
                  mapper,
-                 router, next_button_text, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
+                 router, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
         """
         Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
         the specific details of the webpage source.
@@ -54,20 +48,23 @@ class Market:
         :param next_button_text:
         :param remote:
         """
+
+
         self.mongo_port = mongo_port
         self.port = browser_port
         self.browsers = []
         self.workers = []
-        self.result_stub = result_stub
+        self.result_stub = marketDetails.result_stub
         self.results = None
         self.results_batched = None
-        self.name = name
-        self.next_button_text = next_button_text
-        self.next_page_xpath = next_page_xpath
-        self.result_css = result_css
-        self.result_exclude = result_exclude
-        self.wait_for_car = wait_for_car
-        self.json_identifier = json_identifier
+
+        self.name = marketDetails.name
+        self.next_button_text = marketDetails.next_button_text
+        self.next_page_xpath = marketDetails.next_page_xpath
+        self.result_css = marketDetails.result_css
+        self.result_exclude = marketDetails.result_exclude
+        self.wait_for_car = marketDetails.wait_for_car
+        self.json_identifier = marketDetails.json_identifier
 
         self.mapper = mapper
         self.home = router
