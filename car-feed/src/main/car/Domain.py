@@ -95,6 +95,7 @@ class MarketDetails:
                  json_identifier,
                  next_page_xpath,
                  result_stub, next_button_text):
+        self._id = make_id(name)
         self.next_button_text = next_button_text
         self.name = name
         self.result_css = result_css

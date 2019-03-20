@@ -1,12 +1,11 @@
-import hashlib
 import json
 import logging as log
 from time import time
 
 import pymongo
-from bson import json_util, ObjectId
+from bson import json_util
 
-from src.main.car.Domain import Car
+from src.main.car.Domain import Car, make_id
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
@@ -16,14 +15,11 @@ LOG = LogGenerator(log, name='mongo')
 class MongoService:
     """
     This is the mongo database client. The collection and database it uses are stored in the properties.env file
-    To start a docker container do:
 
-        `docker exec -it nostalgic_murdock mongo mongo`
-
-    in a terminal
     """
 
     def __init__(self, host):
+
         max_delay = MongoServiceConstants().TIMEOUT
         username = MongoServiceConstants().USERNAME
         password = MongoServiceConstants().PASSWORD
@@ -38,14 +34,12 @@ class MongoService:
         # self.market_details_collection.create_index('adDetails.url', pymongo.ALL)
 
     def save_market_details(self, name, market_definition):
-        id = hashlib.sha3_224(name.encode('utf-8')).hexdigest()
-        id = id[:24]
-        market_definition['_id'] = ObjectId(id)
-        x = self.market_details_collection.find_one({'_id': ObjectId(id)})
+        id = make_id(name)
+        x = self.market_details_collection.find_one({'_id': id})
         if x is None:
-            self.market_details_collection.insert_one(market_definition)
+            self.market_details_collection.insert_one(market_definition.__dict__)
         else:
-            self.market_details_collection.replace_one({'_id': ObjectId(id)}, market_definition)
+            self.market_details_collection.replace_one({'_id': id}, market_definition.__dict__)
 
     def insert_or_update_car(self, car: Car, batch_number='Main'):
         """

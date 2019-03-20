@@ -10,7 +10,7 @@ from src.main.service.mongo_service.QueryConstructor import QueryConstructor
 from src.main.service.rest.flask_helper.headers import JSON
 
 query = Blueprint('query', __name__,)
-service = MongoService()
+service = MongoService('0.0.0.0:27017')
 
 
 class Query(FlaskView):

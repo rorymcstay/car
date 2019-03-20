@@ -9,7 +9,8 @@ class Routers(object):
 
         return
 
-    def donedeal(self, make, model, sort):
+    def donedeal(self, make, model, sort='publishdate%20desc'):
+        """return donedeal  url with specific make model and """
         if make and model is not None:
             base = "https://www.donedeal.co.uk/cars/" + make + "/" + model + "?sort=" + sort
         elif make is not None and model is None:

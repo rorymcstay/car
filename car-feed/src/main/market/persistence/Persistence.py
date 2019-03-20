@@ -16,14 +16,15 @@ class Persistence:
     id: ObjectId
     client: MongoService
 
-    def __init__(self, market):
+    def __init__(self, market, marketDetails):
+        self.marketDetails = marketDetails
         self.market = market
         self.client = market.mongoService
         self.id = make_id(self.market.name)
 
     def save_market_details(self):
         """update its market details to in the mongo database """
-        self.client.save_market_details(name=self.market.name, market_definition={'market': self.market.name})
+        self.client.save_market_details(name=self.market.name, market_definition=self.marketDetails)
 
     def save_progress(self):
         """saves the last page it went to with date and the cars it collected from that page"""

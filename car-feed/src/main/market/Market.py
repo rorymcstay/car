@@ -31,7 +31,7 @@ class Market:
 
     def __init__(self, marketDetails: MarketDetails,
                  mapper,
-                 router, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=False):
+                 router, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=True):
         """
         Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
         the specific details of the webpage source.
@@ -67,7 +67,10 @@ class Market:
         self.json_identifier = marketDetails.json_identifier
 
         self.mapper = mapper
-        self.home = router
+        self.router = router
+        self.home = self.router(make=os.getenv('CAR_MAKE', None),
+                                model=os.getenv('CAR_MODEL', None),
+                                sort="publishdate%20desc")
 
         self.mongoConstants = MongoServiceConstants()
         self.mongo_host = '{}:{}'.format(os.getenv('MONGO_HOST', '0.0.0.0'), self.mongo_port)
@@ -82,12 +85,20 @@ class Market:
         self.browser_host='http://{}:{}/wd/hub'.format(BrowserConstants().host, self.port)
         self.webCrawler = WebCrawler(self, self.browser_host)
 
-        self.persistence = Persistence(self)
+        self.persistence = Persistence(self, marketDetails)
         self.persistence.save_market_details()
+        self.webCrawler.driver.get(self.home)
+
+    def specifyMakeModel(self, make, model):
+        self.home = self.router(make, model)
+        self.webCrawler.driver.get(self.home)
+
+    def goHome(self):
+        self.webCrawler.driver.get(self.home)
 
     def collect_cars(self, single=None):
         """
-        Routine for collecting cars. Runs whilst self.market.busy is true. It handles exceptions defined in
+        Routine for brunt force collecting cars. Runs whilst self.market.busy is true. It handles exceptions defined in
         crawling.Exceptions. It uses MongoService to  persist cars to the mongo database in a docker container.
         """
         x = 0
@@ -149,6 +160,35 @@ class Market:
         thread = threading.Thread(target=self.collect_cars, args=())
         thread.start()
         return "started"
+
+    def getResults(self):
+        """
+        get cars from current page of results
+
+        :return:  a list of cars
+        """
+        threadStart=time()
+        write_log(LOG.debug, msg="workers have started")
+        all_results = self.webCrawler.get_result_array()
+        results = [x for x in [self.verify_batch(result) for result in all_results] if x is not None]
+        self.results=results
+        batches = numpy.array_split(results, len(self.workers))
+        for (w, b) in zip(self.workers, batches):
+            w.prepare_batch(b)
+        self.webCrawler.next_page()
+
+        write_log(LOG.info, msg="starting_threads")
+        for t in self.workers:
+            t.thread.start()
+        for t in self.workers:
+            t.thread.join()
+
+        write_log(LOG.debug, msg="all_threads_returned", time=time()-threadStart)
+        self.webCrawler.update_latest_page()
+
+    def makeWorkers(self, max_containers):
+        latest_results = self.webCrawler.get_result_array()
+        self.workers = [Worker(i, self, True) for i in range(min(max_containers, len(latest_results)))]
 
     def start_parrallel(self, max_containers, remote=True):
         self.busy = True
@@ -233,4 +273,5 @@ class Market:
                 pass
         else:
             pass
+
 
