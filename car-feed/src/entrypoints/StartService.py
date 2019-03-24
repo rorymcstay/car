@@ -11,6 +11,7 @@ logging.FileHandler('/var/tmp/myapp.log')
 app = Flask(__name__)
 Command.register(app)
 
+
 @app.errorhandler(500)
 def internal_error(exception):
     print("500 error caught")

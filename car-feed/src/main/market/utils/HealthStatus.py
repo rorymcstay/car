@@ -1,6 +1,6 @@
 
-class HealthStatus:
-    def __init__(self, exception: Exception, browser: str, webcrawler: str):
+class HealthStatus(object):
+    def __init__(self, exception: Exception, browser: str, webCrawler: str):
         """
         The HealthStatus class
 
@@ -11,4 +11,7 @@ class HealthStatus:
         self.exception = exception
         self.exception_message = exception.args[0]
         self.browser = browser
-        self.webcrawler = webcrawler
+        self.webCrawler = webCrawler
+
+    def __dict__(self):
+        return dict(exception = self.exception, exception_message=self.exception_message, browser=self.browser, webCrawler=self.webCrawler)

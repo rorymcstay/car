@@ -75,7 +75,6 @@ class WebCrawler:
             else:
                 raise e
 
-
     def get_raw_car(self, source=None):
         """
         attempts to get car from current page source, returns to the previous set of results in which it came

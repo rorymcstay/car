@@ -59,7 +59,7 @@ class Worker:
 
     #   TODO the worker should write to Mongo in batches
 
-    def getCars(self, results: list, out: list=None):
+    def getCars(self, results: list, out: list = None):
         """
         Updates a list provided called out. Intended to be used in a different thread in conjunction with multiple
         workers
@@ -68,36 +68,40 @@ class Worker:
         """
 
         try:
-            batchTime=time()
+            batchTime = time()
             scanned = 0
             scraped = 0
             for url in results:
                 start = time()
-                webTime=time()
+                webTime = time()
                 self.webCrawler.driver.get(url)
-                write_log(LOG.debug, msg="page_loaded", time_elapsed=time()-webTime)
+                write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
                 scanned += 1
                 if rawCar is False:
-                    write_log(LOG.warning, msg="no_car_found", thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.warning, msg="no_car_found", thread=self.batch_number, time=time() - start,
+                              scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
                     continue
                 else:
                     scraped += 1
-                    write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time() - start, scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
                     try:
-                        out.append(self.market.mapper(rawCar[0], url).__dict__)
+                        out.append(self.market.mapper(rawCar[0], url).__dict__())
                         # TODO check if any car._keys is None
                     except (KeyError, AttributeError) as e:
-                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time()-start, scraped=scraped,
+                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time() - start,
+                                  scraped=scraped,
                                   scanned=scanned, collected=self.cars_collected)
                     self.cars_collected += 1
-                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time() - start,
+                              scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
-            write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time()-batchTime, scraped=scraped,
+            write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time() - batchTime,
+                      scraped=scraped,
                       scanned=scanned, collected=self.cars_collected)
 
         except WebDriverException as e:
@@ -126,7 +130,7 @@ class Worker:
         post_fix = BrowserConstants().client_connect
         return "http://{}:{}/{}".format(host, self.port, post_fix)
 
-    def health_check(self, exception=Exception('None')):
+    def health_check(self, exception: Exception = Exception('None')) -> dict:
         """
         Conduct a health check of resources
 
@@ -134,13 +138,15 @@ class Worker:
         :return:
         """
         try:
-            write_log(LOG.info, thread= self.batch_number, msg="doing_health_check")
-            self.health = HealthStatus(exception,
-                                       browser=self.browser.health_indicator(),
-                                       webcrawler=self.webCrawler.health_indicator())
-            write_log(log=LOG.debug, msg='health_check', browser=self.health.browser,
-                      exception=self.health.exception_message,
-                      webCrawler=self.health.webcrawler, collected=str(self.cars_collected))
+            write_log(LOG.info, thread=self.batch_number, msg="doing_health_check")
+            health = HealthStatus(exception,
+                                  browser=self.browser.health_indicator(),
+                                  webCrawler=self.webCrawler.health_indicator())
+            write_log(log=LOG.debug, msg='health_check', browser=health.browser,
+                      exception=health.exception_message,
+                      webCrawler=health.webCrawler, collected=str(self.cars_collected))
+            self.health = health
+            return health.__dict__()
         except Exception as e:
             write_log(LOG.error, thread=self.batch_number,
                       msg="error taking health check for because {}".format(e.args[0]))
@@ -168,51 +174,56 @@ class Worker:
         """
 
         try:
-            batchTime=time()
+            batchTime = time()
             scanned = 0
             scraped = 0
             for url in results:
                 start = time()
                 if self.stop is False:
                     return
-                webTime=time()
+                webTime = time()
                 self.webCrawler.driver.get(url)
-                write_log(LOG.debug, msg="page_loaded", time_elapsed=time()-webTime)
+                write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
                 scanned += 1
                 if rawCar is False:
-                    write_log(LOG.warning, msg="no_car_found", thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.warning, msg="no_car_found", thread=self.batch_number, time=time() - start,
+                              scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
                     continue
                 else:
                     scraped += 1
-                    write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time() - start, scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
                     try:
                         car = self.market.mapper(rawCar[0], url)
                         self.mongoService.insert_car(car=car, batch_number=self.batch_number)
                         # TODO check if any car._keys is None
                     except (KeyError, AttributeError) as e:
-                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time()-start, scraped=scraped,
+                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time() - start,
+                                  scraped=scraped,
                                   scanned=scanned, collected=self.cars_collected)
                         if os.getenv("SAVE_RAWCAR", "False") == "False":
                             continue
-                        failedRaw=rawCar[0]
+                        failedRaw = rawCar[0]
                         failedRaw['_id'] = make_id(url)
                         try:
                             self.mongoService.db['{}_rawCar'.format(self.market.name)].insert_one(failedRaw)
                             write_log(LOG.info, thread=self.batch_number, msg="saved_raw_car")
                         except Exception:
-                            write_log(LOG.warning, "saving_error", thread=self.batch_number, time=time()-start, scraped=scraped,
+                            write_log(LOG.warning, "saving_error", thread=self.batch_number, time=time() - start,
+                                      scraped=scraped,
                                       scanned=scanned, collected=self.cars_collected)
                             traceback.print_exc()
                         continue
                     self.cars_collected += 1
-                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time()-start, scraped=scraped,
+                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time() - start,
+                              scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
-            write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time()-batchTime, scraped=scraped,
+            write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time() - batchTime,
+                      scraped=scraped,
                       scanned=scanned, collected=self.cars_collected)
 
         except WebDriverException as e:

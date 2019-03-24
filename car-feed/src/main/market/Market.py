@@ -191,6 +191,8 @@ class Market:
     def makeWorkers(self, max_containers):
         """
         initiate workers and their containers.
+        TODO Add a part which checks for containers which have same name and handle accordingly
+
         :param max_containers: The maximum number of containers to start
         :return: Updates the workers list
         """

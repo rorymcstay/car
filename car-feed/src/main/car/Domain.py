@@ -1,10 +1,22 @@
 import hashlib
+from json import JSONEncoder
 
 from bson import ObjectId
 
 """
 Houses the standard car classes to map to
 """
+
+
+class Encoder(JSONEncoder):
+    """
+    Extends JSONEncoder so that ~bson.ObjectId can be serialised to a string
+    """
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(0)
+        else:
+            return JSONEncoder.default(self, o)
 
 
 def make_id(string) -> ObjectId:
