@@ -111,8 +111,10 @@ class MarketDetails:
                  wait_for_car,
                  json_identifier,
                  next_page_xpath,
-                 result_stub, next_button_text):
+                 result_stub, next_button_text,
+                 sort):
         self._id = make_id(name)
+        self.sort = sort
         self.next_button_text = next_button_text
         self.name = name
         self.result_css = result_css

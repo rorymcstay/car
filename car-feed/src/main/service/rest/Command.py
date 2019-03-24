@@ -32,7 +32,8 @@ class Command(FlaskView):
                                       json_identifier=market_definition['json_identifier'],
                                       next_page_xpath=market_definition['next_page_xpath'],
                                       next_button_text='Next',
-                                      result_stub=market_definition['result_stub'])
+                                      result_stub=market_definition['result_stub'],
+                                      sort=market_definition['sort'])
         name = market_definition['name']
         marketSet[name] = Market(marketDetails=marketDetails,
                                  mapper=mappers["_" + name + "_mapper"],
@@ -41,7 +42,7 @@ class Command(FlaskView):
                                  browser_port=int(os.getenv('BROWSER_BASE_PORT', 4444)))
 
     @route('/add_market/<string:name>', methods=['PUT'])
-    def add_market(self, name):
+    def addMarket(self, name):
         """
         create a new Market Object and save to database
 
@@ -57,7 +58,8 @@ class Command(FlaskView):
                                       json_identifier=market_definition['json_identifier'],
                                       next_page_xpath=market_definition['next_page_xpath'],
                                       next_button_text='Next',
-                                      result_stub=market_definition['result_stub'])
+                                      result_stub=market_definition['result_stub'],
+                                      sort=market_definition['sort'])
         if name in marketSet.keys():
             returnString = [worker.health_check() for worker in marketSet[name].workers]
             return json.dumps(returnString)
@@ -84,20 +86,46 @@ class Command(FlaskView):
 
     @route('/get_results/<string:name>', methods=['GET'])
     def getResults(self, name):
+        """
+        return current page of results
+
+        :param name:
+        :return:
+        """
         results = marketSet[name].getResults()
+        marketSet[name].webCrawler.next_page()
         return json.dumps(results, cls=Encoder)
 
-    @route('/reset/<string:name>/<string:make>/<string:model>', methods=['PUT'])
+    @route('/reset/<string:name>/<string:make>/<string:model>', methods=['GET'])
     def specifyMakeModel(self, make, model, name):
+        """
+        Change the make and model to be collected
+
+        :param make:
+        :param model:
+        :param name:
+        :return:
+        """
         marketSet[name].specifyMakeModel(make, model)
         return 'ok'
 
-    @route('/clean_up_resources/name')
+    @route('/clean_up_resources/name', methods=['GET'])
     def cleanUpResources(self, name):
+        """
+        Destroy Workers' resources
+        :param name:
+        :return:
+        """
         marketSet[name].tear_down_workers()
         return 'ok'
 
-    @route('/reset/<string:name>', methods=['PUT'])
-    def specifyMakeModel(self, name):
+    @route('/reset/<string:name>', methods=['GET'])
+    def reset(self, name):
+        """
+        go back to the home page
+
+        :param name:
+        :return:
+        """
         marketSet[name].goHome()
         return 'ok'

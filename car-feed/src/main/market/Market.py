@@ -57,6 +57,8 @@ class Market:
         self.results = None
         self.results_batched = None
 
+        self.sortString=marketDetails.sort
+
         self.name = marketDetails.name
         self.next_button_text = marketDetails.next_button_text
         self.next_page_xpath = marketDetails.next_page_xpath
@@ -69,7 +71,7 @@ class Market:
         self.router = router
         self.home = self.router(make=os.getenv('CAR_MAKE', None),
                                 model=os.getenv('CAR_MODEL', None),
-                                sort="publishdate%20desc")
+                                sort=self.sortString)
 
         self.mongoConstants = MongoServiceConstants()
         self.mongo_host = '{}:{}'.format(os.getenv('MONGO_HOST', '0.0.0.0'), self.mongo_port)
@@ -96,7 +98,7 @@ class Market:
         :param model: The model of car
         :return:
         """
-        self.home = self.router(make, model)
+        self.home = self.router(make, model, sort=self.sortString)
         self.webCrawler.driver.get(self.home)
 
     def goHome(self):
@@ -185,7 +187,6 @@ class Market:
             t.thread.join()
 
         write_log(LOG.debug, msg="all_threads_returned", time=time()-threadStart)
-        self.webCrawler.update_latest_page()
         return out
 
     def makeWorkers(self, max_containers):
