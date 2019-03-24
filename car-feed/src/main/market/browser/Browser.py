@@ -1,4 +1,5 @@
 import logging as log
+from http.client import RemoteDisconnected
 from time import time, sleep
 
 import docker
@@ -14,7 +15,8 @@ class Browser:
 
     def __init__(self, name, port, batch_number):
         """
-        Begins a browser container
+        Starts a browser container
+
         :type name: string
         :param name: the name of the container
         :param batch_number: the batch it is inteded to process
@@ -47,7 +49,9 @@ class Browser:
             if e.status_code == 500:
                 write_log(LOG.error, thread=self.batch_number, msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
                 raise e
-        self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+        except RemoteDisconnected as e:
+            write_log(log.error, thread=self.batch_number, msg='Browser container not reachable')
+            self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
 
     def wait_for_log(self, hub, partial_url):
         """
@@ -77,9 +81,12 @@ class Browser:
                 self.__init__(self.name, self.port, self.batch_number)
             except APIError as e:
                 write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
+
+
     # TODO handle RemoteDisconnected
 
     def quit(self):
+        """Destroy the container"""
         try:
             self.browser.kill()
         except APIError as e:
@@ -90,6 +97,11 @@ class Browser:
             write_log(LOG.warning, msg="failed to remove container", thread=self.batch_number, explanation=e.explanation)
 
     def health_indicator(self):
+        """
+        get the status of the container
+
+        :return:
+        """
         try:
             self.browser.reload()
         except APIError as e:

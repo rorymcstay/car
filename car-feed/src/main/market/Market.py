@@ -1,7 +1,6 @@
 import logging as log
 import os
 import sys
-import threading
 import traceback
 from time import time
 
@@ -90,16 +89,28 @@ class Market:
         self.webCrawler.driver.get(self.home)
 
     def specifyMakeModel(self, make, model):
+        """
+        Changes the focus of the market.
+
+        :param make: The make of car
+        :param model: The model of car
+        :return:
+        """
         self.home = self.router(make, model)
         self.webCrawler.driver.get(self.home)
 
     def goHome(self):
+        """
+        navigate back to the base url
+        :return:
+        """
         self.webCrawler.driver.get(self.home)
 
     def collect_cars(self, single=None):
         """
         Routine for brunt force collecting cars. Runs whilst self.market.busy is true. It handles exceptions defined in
         crawling.Exceptions. It uses MongoService to  persist cars to the mongo database in a docker container.
+
         """
         x = 0
         while self.busy:
@@ -150,23 +161,13 @@ class Market:
                 self.webCrawler.retrace_steps(x)
             x = x + 1
 
-    def start_single(self):
-        """
-        Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
-        :return:
-        """
-        self.webCrawler.latest_page = self.home
-        self.busy = True
-        thread = threading.Thread(target=self.collect_cars, args=())
-        thread.start()
-        return "started"
-
     def getResults(self):
         """
         get cars from current page of results
 
         :return:  a list of cars
         """
+        out = []
         threadStart=time()
         write_log(LOG.debug, msg="workers have started")
         all_results = self.webCrawler.get_result_array()
@@ -174,7 +175,7 @@ class Market:
         self.results=results
         batches = numpy.array_split(results, len(self.workers))
         for (w, b) in zip(self.workers, batches):
-            w.prepare_batch(b)
+            w.prepare_batch(b, out)
         self.webCrawler.next_page()
 
         write_log(LOG.info, msg="starting_threads")
@@ -185,17 +186,27 @@ class Market:
 
         write_log(LOG.debug, msg="all_threads_returned", time=time()-threadStart)
         self.webCrawler.update_latest_page()
+        return out
 
     def makeWorkers(self, max_containers):
+        """
+        initiate workers and their containers.
+        :param max_containers: The maximum number of containers to start
+        :return: Updates the workers list
+        """
         latest_results = self.webCrawler.get_result_array()
         self.workers = [Worker(i, self, True) for i in range(min(max_containers, len(latest_results)))]
 
     def start_parrallel(self, max_containers, remote=True):
+        """
+        Start collecting cars with the workers
+        :param max_containers:
+        :param remote:
+        :return:
+        """
         self.busy = True
         Persistence(self).return_to_previous()
-        latest_results = self.webCrawler.get_result_array()
-
-        self.workers = [Worker(i, self, remote) for i in range(min(max_containers, len(latest_results)))]
+        self.makeWorkers(max_containers)
         page = 1
         try:
             total=0
@@ -235,6 +246,11 @@ class Market:
             traceback.print_exc()
 
     def tear_down_workers(self):
+        """
+        Stop resources allocated to the workers
+
+        :return:
+        """
         self.busy = False
         w: Worker
         for w in self.workers:
@@ -263,6 +279,11 @@ class Market:
                 worker.regenerate()
 
     def verify_batch(self, result):
+        """
+        Check that members of the current queue have not been persisted to the database.
+        :param result:
+        :return:
+        """
         id = make_id(result)
         x = self.mongoService.cars.find_one(dict(_id=id))
         if x is None:

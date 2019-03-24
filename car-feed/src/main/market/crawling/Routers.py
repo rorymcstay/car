@@ -1,5 +1,5 @@
-
 class Routers(object):
+
     def __init__(self):
 
         donedeal_router = lambda make, model, sort: self.donedeal(make, model, sort)

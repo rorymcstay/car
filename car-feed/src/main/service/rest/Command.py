@@ -13,6 +13,7 @@ from src.main.service.mongo_service.MongoService import MongoService
 markets = {}
 service = MongoService('{}:{}'.format('0.0.0.0', 27017))
 
+
 class Command(FlaskView):
 
     @route('/add_market/<string:name>', methods=['PUT'])

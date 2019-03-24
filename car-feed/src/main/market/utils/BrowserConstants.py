@@ -8,10 +8,12 @@ docker_client = docker.client.from_env()
 class BrowserConstants:
 
     def __init__(self):
+        """
+        Contains envrionment variables used for creating Browsers
+        """
         self.CONTAINER_TIMEOUT = int(os.getenv('CONTAINER_TIMEOUT', 10))
         self.CONTAINER_SUCCESS = 'Selenium Server is up and running on port'
         self.host = os.getenv('BROWSER_CONTAINER_HOST', 'localhost')
-
         self.browser_image = docker_client.images.get(os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome'))
         self.client_connect = 'wd/hub'
         self.worker_timeout = int(os.getenv('WORKER_TIMEOUT', '3'))

@@ -25,6 +25,13 @@ class Worker:
     mongoService: MongoService
 
     def __init__(self, batch_number, market, remote=False):
+        """
+        Worker class has a browser container and selenium driver which it uses to collect cars in a seperate thread.
+
+        :param batch_number:
+        :param market:
+        :param remote:
+        """
         self.error = True
         self.stop = True
         self.cars_collected = 0
@@ -37,17 +44,26 @@ class Worker:
         self.browser = Browser(market.name, batch_number=self.batch_number, port=self.port)
         self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
-    def prepare_batch(self, results):
+    def prepare_batch(self, results, out):
+        """
+        prepare worker threads and distribute results amongst workers
+
+        :param results:
+        :param out:
+        :return:
+        """
         start = time()
-        self.thread = threading.Thread(target=self.getCars, args=([results]),
+        self.thread = threading.Thread(target=self.getCars, args=(results, out),
                                        name='Thread {}'.format(str(self.batch_number)))
         write_log(LOG.info, msg="batch_prepared", thread=self.batch_number, time=start, size=len(results))
 
     #   TODO the worker should write to Mongo in batches
 
-    def getCars(self, results: list, out: list):
+    def getCars(self, results: list, out: list=None):
         """
-        get a list of cars in batch
+        Updates a list provided called out. Intended to be used in a different thread in conjunction with multiple
+        workers
+
         :param results: the batch or urls
         """
 
@@ -57,8 +73,6 @@ class Worker:
             scraped = 0
             for url in results:
                 start = time()
-                if self.stop is False:
-                    return
                 webTime=time()
                 self.webCrawler.driver.get(url)
                 write_log(LOG.debug, msg="page_loaded", time_elapsed=time()-webTime)
@@ -75,7 +89,7 @@ class Worker:
                     write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time()-start, scraped=scraped,
                               scanned=scanned, collected=self.cars_collected)
                     try:
-                        out.append(self.market.mapper(rawCar[0], url))
+                        out.append(self.market.mapper(rawCar[0], url).__dict__)
                         # TODO check if any car._keys is None
                     except (KeyError, AttributeError) as e:
                         write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time()-start, scraped=scraped,
@@ -85,7 +99,6 @@ class Worker:
                               scanned=scanned, collected=self.cars_collected)
             write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time()-batchTime, scraped=scraped,
                       scanned=scanned, collected=self.cars_collected)
-            return out
 
         except WebDriverException as e:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)
@@ -101,6 +114,11 @@ class Worker:
             self.webCrawler = WebCrawler(self.market, remote=self.make_url())
 
     def make_url(self):
+        """
+        return the url of the webdriver inside the docker container.
+
+        :return:
+        """
         if self.remote is False:
             return False
         host = BrowserConstants().host
@@ -109,6 +127,12 @@ class Worker:
         return "http://{}:{}/{}".format(host, self.port, post_fix)
 
     def health_check(self, exception=Exception('None')):
+        """
+        Conduct a health check of resources
+
+        :param exception:
+        :return:
+        """
         try:
             write_log(LOG.info, thread= self.batch_number, msg="doing_health_check")
             self.health = HealthStatus(exception,
@@ -122,6 +146,11 @@ class Worker:
                       msg="error taking health check for because {}".format(e.args[0]))
 
     def clean_up(self):
+        """
+        kill resources
+
+        :return:
+        """
         self.browser.quit()
         write_log(LOG.info, thread=self.batch_number, msg="cleaning up")
 
@@ -134,6 +163,7 @@ class Worker:
     def get_results(self, results):
         """
         Starts collect_cars routine by setting car busy to true. It starts it in a new thread.
+
         :return:
         """
 

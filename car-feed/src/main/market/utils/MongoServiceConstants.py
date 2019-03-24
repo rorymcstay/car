@@ -3,6 +3,9 @@ import os
 
 class MongoServiceConstants(object):
     def __init__(self):
+        """
+        Contains environmenmt variables for the mongo service
+        """
         self.port = os.getenv('MONGO_PORT', '27017')
         self.MARKETS = os.getenv('MARKET_DETAILS', 'marketDetails')
         self.COLLECTION_NAME = os.getenv("MONGO_COLLECTION", 'cars')

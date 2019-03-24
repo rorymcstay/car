@@ -8,6 +8,11 @@ Houses the standard car classes to map to
 
 
 def make_id(string) -> ObjectId:
+    """
+    default function for constructing an id for mongo persistence
+    :param string: The attribute to
+    :return:
+    """
     id = hashlib.sha3_224(string.encode('utf-8')).hexdigest()
     id = id[:24]
     return ObjectId(id)
@@ -106,7 +111,7 @@ class MarketDetails:
         self.result_stub = result_stub
 
 
-class Car:
+class Car(object):
     _id: ObjectId
 
     def __init__(self, adDetails: AdDetails, carDetails: CarDetails, adDescription: str, adPhotos: list):
@@ -137,3 +142,5 @@ class Car:
 
     def getCarDetails(self) -> CarDetails:
         return self.carDetails
+
+
