@@ -2,6 +2,7 @@ import json
 import logging as log
 import re
 import traceback
+from http.client import RemoteDisconnected
 from time import time, sleep
 
 import selenium.webdriver as webdriver
@@ -17,7 +18,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
-from urllib3.exceptions import MaxRetryError
+from urllib3.exceptions import MaxRetryError, ProtocolError
 
 from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  EndOfQueueNotification,
@@ -55,13 +56,25 @@ class WebCrawler:
             LOG.debug("Starting remote driver for %s", market.name)
             options = Options()
             options.add_argument("--headless")
-            self.driver = webdriver.Remote(command_executor=url,
-                                           desired_capabilities=DesiredCapabilities.CHROME,
-                                           options=options)
-
+            self.startWebdriverSession(url, options)
             write_log(LOG.info,msg='remote driver initiated', webdriver_host=url)
         self.driver.set_window_size(1120, 900)
         self.history = []
+
+    def startWebdriverSession(self, url, options, attempts=0):
+        try:
+            attempts += 1
+            self.driver = webdriver.Remote(command_executor=url,
+                                           desired_capabilities=DesiredCapabilities.CHROME,
+                                           options=options)
+        except (RemoteDisconnected, ProtocolError) as e:
+            write_log(LOG.warning, msg="failed to communicate with selenium")
+            if attempts < 10:
+                sleep(3)
+                self.startWebdriverSession(url, options, attempts)
+            else:
+                raise e
+
 
     def get_raw_car(self, source=None):
         """
