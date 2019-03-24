@@ -10,6 +10,7 @@ from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
 from src.main.market.mapping.Mappers import mappers
 from src.main.service.mongo_service.MongoService import MongoService
+from src.main.service.rest.flask_helper.headers import JSON
 
 service = MongoService('{}:{}'.format('0.0.0.0', 27017))
 
@@ -84,6 +85,7 @@ class Command(FlaskView):
         marketSet[name].makeWorkers(max_containers)
         return 'ok'
 
+    @JSON
     @route('/get_results/<string:name>', methods=['GET'])
     def getResults(self, name):
         """

@@ -12,8 +12,11 @@ def JSON(f):
     return decorated_function
 
 
-def add_response_headers(headers={}):
+def add_response_headers(headers=None):
     """This decorator adds the headers passed in to the response"""
+    if headers is None:
+        headers = {}
+
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
