@@ -14,4 +14,4 @@ class HealthStatus(object):
         self.webCrawler = webCrawler
 
     def __dict__(self):
-        return dict(exception = self.exception, exception_message=self.exception_message, browser=self.browser, webCrawler=self.webCrawler)
+        return dict(exception_message=self.exception_message, browser=self.browser, webCrawler=self.webCrawler)

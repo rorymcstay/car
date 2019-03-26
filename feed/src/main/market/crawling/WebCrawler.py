@@ -13,6 +13,7 @@ from selenium.common.exceptions import (TimeoutException,
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from slimit import ast
@@ -28,6 +29,7 @@ from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
+LOGGER.setLevel(log.WARNING)
 LOG = LogGenerator(log, name='webcrawler')
 
 
@@ -62,14 +64,15 @@ class WebCrawler:
         self.history = []
 
     def startWebdriverSession(self, url, options, attempts=0):
+        max_attempts=10
         try:
             attempts += 1
             self.driver = webdriver.Remote(command_executor=url,
                                            desired_capabilities=DesiredCapabilities.CHROME,
                                            options=options)
         except (RemoteDisconnected, ProtocolError) as e:
-            write_log(LOG.warning, msg="failed to communicate with selenium")
-            if attempts < 10:
+            write_log(LOG.warning, msg="failed to communicate with selenium, trying again for {} more times".format(max_attempts-attempts))
+            if attempts < max_attempts:
                 sleep(3)
                 self.startWebdriverSession(url, options, attempts)
             else:
