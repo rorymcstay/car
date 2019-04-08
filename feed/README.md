@@ -36,3 +36,9 @@ the docker-compose configuration.
 <!--TODO formalise mounting of docker compose keys: https://docs.docker.com/compose/compose-file/#variable-substitution->
 <!--TODO market details object in constructor for market-->
 <!--TODO simplify market constructor-->
+
+## Delivery mechanism
+
+## Request mechanism
+You have to ask it for data items. It checks the cache
+A request module which accepts requests and forwards it to server

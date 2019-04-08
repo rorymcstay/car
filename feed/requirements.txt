@@ -12,3 +12,5 @@ elasticsearch
 pyyaml
 docker
 influxdb
+hazelcast-python-client
+

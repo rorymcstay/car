@@ -10,10 +10,10 @@ from src.main.utils.LogGenerator import write_log, LogGenerator
 LOG = LogGenerator(log, 'mapping')
 
 
-def DoneDeal(car_old, url):
+def DoneDeal(car_old: dict, url: str) -> Car:
     """
-    :param car_old:
-    :return: This function persists the car object to the MongoDb database
+    :param car_old: the raw json object
+    :return: returns a default car
     """
     now = datetime.datetime.now()
     start = time()

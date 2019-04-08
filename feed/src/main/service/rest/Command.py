@@ -5,12 +5,12 @@ from typing import Dict
 from flask import request
 from flask_classy import FlaskView, route
 
+from src.main.car.Domain import Encoder
 from src.main.car.Domain import MarketDetails
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
 from src.main.market.mapping.Mappers import mappers
 from src.main.service.mongo_service.MongoService import MongoService
-from src.main.service.rest.flask_helper.headers import JSON
 
 service = MongoService('{}:{}'.format('0.0.0.0', 27017))
 
@@ -73,7 +73,6 @@ class Command(FlaskView):
         marketSet[name].webCrawler.driver.get(marketSet[name].home)
         return 'ok'
 
-    @JSON
     @route('/initialise/<string:name>/<int:max_containers>', methods=['GET'])
     def initialise(self, name, max_containers):
         """
@@ -86,9 +85,8 @@ class Command(FlaskView):
         marketSet[name].makeWorkers(max_containers)
         returnString = [{w.batch_number: w.health_check()} for w in marketSet[name].workers]
 
-        return json.dumps(returnString), 200, 'application/json'
+        return json.dumps(returnString)
 
-    @JSON
     @route('/get_results/<string:name>', methods=['GET'])
     def getResults(self, name):
         """
@@ -99,7 +97,7 @@ class Command(FlaskView):
         """
         returnString = marketSet[name].getResults()
         marketSet[name].webCrawler.next_page()
-        return json.dumps(returnString), 200, 'application/json'
+        return json.dumps(returnString, cls=Encoder)
 
     @route('/reset/<string:name>/<string:make>/<string:model>', methods=['GET'])
     def specifyMakeModel(self, make, model, name):
