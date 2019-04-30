@@ -160,12 +160,11 @@ class Car(object):
     
 class Result:
     
-    def __init__(self, items: Dict[str, str], id: str, price: int):
+    def __init__(self, items: Dict[str, str]):
 
         self.items = items
         self.id = id
-        self.price = price
-        
+
     
  
 

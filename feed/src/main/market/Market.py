@@ -172,7 +172,7 @@ class Market:
         return results
 
     def selectResult(self, id):
-
+        pass
 
 
     def getResults(self):

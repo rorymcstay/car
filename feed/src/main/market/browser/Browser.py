@@ -84,6 +84,7 @@ class Browser:
 
 
     # TODO handle RemoteDisconnected
+    # TODO check for running containers before creation/worker to store running containers
 
     def quit(self):
         """Destroy the container"""
