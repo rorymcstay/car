@@ -1,5 +1,6 @@
 import hashlib
 from json import JSONEncoder
+from typing import Dict
 
 from bson import ObjectId
 
@@ -156,5 +157,17 @@ class Car(object):
 
     def getCarDetails(self) -> CarDetails:
         return self.carDetails
+    
+class Result:
+    
+    def __init__(self, items: Dict[str, str], id: str, price: int):
+
+        self.items = items
+        self.id = id
+        self.price = price
+        
+    
+ 
+
 
 

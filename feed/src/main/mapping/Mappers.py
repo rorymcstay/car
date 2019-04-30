@@ -1,4 +1,4 @@
-from src.main.market.mapping.DoneDeal import DoneDeal
+from src.main.mapping.DoneDeal import DoneDeal
 
 
 class Mappers(object):

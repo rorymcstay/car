@@ -11,6 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from src.main.car.Domain import make_id, MarketDetails
+from src.main.mapping.ResultParser import ResultParser
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
@@ -46,6 +47,7 @@ class Market:
         :param router:
         :param next_button_text:
         :param remote:
+        # TODO extract fields into params
         """
 
 
@@ -69,6 +71,7 @@ class Market:
 
         self.mapper = mapper
         self.router = router
+        self.resultParser = ResultParser(self.name)
         self.home = self.router(make=os.getenv('CAR_MAKE', None),
                                 model=os.getenv('CAR_MODEL', None),
                                 sort=self.sortString)
@@ -163,6 +166,15 @@ class Market:
                 self.webCrawler.retrace_steps(x)
             x = x + 1
 
+    def getListOfResults(self):
+        results = self.resultParser.parseResults(self.webCrawler.driver.page_source)
+
+        return results
+
+    def selectResult(self, id):
+
+
+
     def getResults(self):
         """
         get cars from current page of results
@@ -193,7 +205,6 @@ class Market:
         """
         initiate workers and their containers.
         TODO Add a part which checks for containers which have same name and handle accordingly
-
         :param max_containers: The maximum number of containers to start
         :return: Updates the workers list
         """

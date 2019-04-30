@@ -3,9 +3,9 @@ import os
 import docker.client
 from resources.TestConstants import TestConstants
 
+from src.main.mapping.Mappers import mappers
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
-from src.main.market.mapping.Mappers import mappers
 from src.main.market.utils.BrowserConstants import get_open_port
 
 mongo_port = get_open_port()

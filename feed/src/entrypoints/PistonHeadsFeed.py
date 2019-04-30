@@ -2,9 +2,9 @@ import os
 
 from pyfiglet import Figlet
 
+from src.main.mapping.Mappers import mappers
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
-from src.main.market.mapping.Mappers import mappers
 from src.main.utils.TerminateProtected import TerminateProtected
 
 custom_fig = Figlet(font='graffiti')

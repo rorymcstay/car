@@ -4,7 +4,7 @@ import traceback
 from time import time
 
 from src.main.car.Domain import CarDetails, Location, AdDetails, CarType, Car
-from src.main.market.mapping.mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
+from src.main.mapping.mappingTools import index_of_list_where_key_equals, get_photos_in_a_list
 from src.main.utils.LogGenerator import write_log, LogGenerator
 
 LOG = LogGenerator(log, 'mapping')
@@ -115,3 +115,7 @@ def DoneDeal(car_old: dict, url: str) -> Car:
 
     car = Car(adDetails, carDetails, adDescription, adPhotos)
     return car
+
+def resultMapping(textString):
+    t = textString.split("\n")
+    return {'vals': t}

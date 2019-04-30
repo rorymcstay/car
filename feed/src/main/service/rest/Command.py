@@ -7,9 +7,9 @@ from flask_classy import FlaskView, route
 
 from src.main.car.Domain import Encoder
 from src.main.car.Domain import MarketDetails
+from src.main.mapping.Mappers import mappers
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
-from src.main.market.mapping.Mappers import mappers
 from src.main.service.mongo_service.MongoService import MongoService
 
 service = MongoService('{}:{}'.format('0.0.0.0', 27017))
