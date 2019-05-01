@@ -160,7 +160,12 @@ class Car(object):
     
 class Result:
 
-    def __init__(self, items: Dict[str, str]):
+    def __init__(self, items: Dict[str, str], url):
 
         self.items = items
-        self.id = id
+        self.url = url
+
+    def __dict__(self):
+        return dict(id=self.url, **self.items)
+
+

@@ -18,4 +18,3 @@ market = Market(name='donedeal',
 #         market.start_parrallel(int(os.getenv('THREADS', 5)))
 
 market.makeWorkers(2)
-t = market.getResults()
