@@ -159,14 +159,8 @@ class Car(object):
         return self.carDetails
     
 class Result:
-    
+
     def __init__(self, items: Dict[str, str]):
 
         self.items = items
         self.id = id
-
-    
- 
-
-
-

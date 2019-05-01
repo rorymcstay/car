@@ -10,14 +10,14 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from src.main.car.Domain import make_id, MarketDetails
+from settings import markets
+from src.main.car.Domain import make_id
 from src.main.mapping.ResultParser import ResultParser
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.persistence.Persistence import Persistence
-from src.main.market.utils.BrowserConstants import BrowserConstants
 from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
 from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
@@ -29,69 +29,29 @@ LOG = LogGenerator(log, name='market')
 
 class Market:
 
-    def __init__(self, marketDetails: MarketDetails,
-                 mapper,
-                 router, browser_port, mongo_port=os.getenv('MONGO_PORT', 27017), remote=True):
-        """
-        Market object has control over a :class: Browser object and a :class: WebCrawler and Workers It also contains
-        the specific details of the webpage source.
+    def __init__(self, name, mapper, router):
 
-        :param name: name of market place for reference
-        :param result_css: the css path to the result item
-        :param result_exclude: an array of strings to exclude from car result body text
-        :param wait_for_car: item on page to wait for for car
-        :param json_identifier:
-        :param next_page_xpath:
-        :param result_stub:
-        :param mapper:
-        :param router:
-        :param next_button_text:
-        :param remote:
-        # TODO extract fields into params
-        """
-
-
-        self.mongo_port = mongo_port
-        self.port = browser_port
+        self.params = markets[name]
         self.browsers = []
         self.workers = []
-        self.result_stub = marketDetails.result_stub
         self.results = None
         self.results_batched = None
-
-        self.sortString=marketDetails.sort
-
-        self.name = marketDetails.name
-        self.next_button_text = marketDetails.next_button_text
-        self.next_page_xpath = marketDetails.next_page_xpath
-        self.result_css = marketDetails.result_css
-        self.result_exclude = marketDetails.result_exclude
-        self.wait_for_car = marketDetails.wait_for_car
-        self.json_identifier = marketDetails.json_identifier
-
+        self.name = name
         self.mapper = mapper
         self.router = router
-        self.resultParser = ResultParser(self.name)
         self.home = self.router(make=os.getenv('CAR_MAKE', None),
                                 model=os.getenv('CAR_MODEL', None),
-                                sort=self.sortString)
-
+                                sort=self.params['sortString'])
         self.mongoConstants = MongoServiceConstants()
-        self.mongo_host = '{}:{}'.format(os.getenv('MONGO_HOST', '0.0.0.0'), self.mongo_port)
-        self.mongoService = MongoService(self.mongo_host)
+        self.resultParser = ResultParser(self.name)
+        self.mongoService = MongoService('{mongo_host}:{mongo_port}'.format(**self.params))
         self.busy = False
 
-        if remote is False:
-            self.webCrawler = WebCrawler(self)
-            return
-        # starting dedicated browser containercf
-        self.browser = Browser(self.name, batch_number='main', port=self.port)
-        self.browser_host='http://{}:{}/wd/hub'.format(BrowserConstants().host, self.port)
-        self.webCrawler = WebCrawler(self, self.browser_host)
+        self.browser = Browser(name=name, port=self.params['browser_port'])
+        self.webCrawler = WebCrawler(self.name, self.params['browser_port'])
 
-        self.persistence = Persistence(self, marketDetails)
-        self.persistence.save_market_details()
-        self.webCrawler.driver.get(self.home)
+        self.persistence = Persistence(self)
+        self.goHome()
 
     def specifyMakeModel(self, make, model):
         """
@@ -101,7 +61,7 @@ class Market:
         :param model: The model of car
         :return:
         """
-        self.home = self.router(make, model, sort=self.sortString)
+        self.home = self.router(make, model, sort=self.params['sortString'])
         self.webCrawler.driver.get(self.home)
 
     def goHome(self):
@@ -127,7 +87,7 @@ class Market:
             for i in queue:  # TODO Handle webdriver exceptions within this block
                 raw_cars = False
                 try:
-                    result = self.webCrawler.get_queue_member(i, self.result_exclude)
+                    result = self.webCrawler.get_queue_member(i, self.params['result_exclude'])
                     raw_cars = self.webCrawler.get_result(result)
                 except ExcludedResultNotifier:
                     write_log(LOG.warning, thread='main', msg="skipped excluded result")
@@ -144,7 +104,7 @@ class Market:
                     pass
                     try:
                         self.webCrawler.driver.get(self.webCrawler.last_result)
-                        element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.result_css))
+                        element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.params['result_css']))
                         WebDriverWait(self.webCrawler.driver, WebCrawlerConstants().click_timeout).until(element_present)
                     except TimeoutException:
                         write_log(LOG.warning, msg='timeout_exception')

@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
+from settings import markets
 from src.main.car.Domain import make_id
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
@@ -32,17 +33,18 @@ class Worker:
         :param market:
         :param remote:
         """
+        self.params = markets[market.name]
         self.error = True
         self.stop = True
         self.cars_collected = 0
         self.thread = None
-        self.mongoService = MongoService(market.mongo_host)
+        self.mongoService = MongoService('{mongo_host}:{mongo_port}'.format(**self.params))
         self.batch_number = batch_number
         self.port = get_open_port()
         self.market = market
         self.remote = remote
         self.browser = Browser(market.name, batch_number=self.batch_number, port=self.port)
-        self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+        self.webCrawler = WebCrawler(self.market.name, self.port)
 
     def prepare_batch(self, results, out):
         """
@@ -76,7 +78,7 @@ class Worker:
                 webTime = time()
                 self.webCrawler.driver.get(url)
                 write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
-                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
+                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.params['wait_for_car']))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
                 scanned += 1
@@ -107,7 +109,7 @@ class Worker:
         except WebDriverException as e:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)
             traceback.print_exc()
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            self.webCrawler = WebCrawler(self.market, get_open_port())
             write_log(LOG.info, thread=self.batch_number, msg="restarted_webCrawler")
         except APIError as e:
             write_log(LOG.error, msg="docker_api_error", thread=self.batch_number)
@@ -115,20 +117,8 @@ class Worker:
             self.clean_up()
             traceback.print_exc()
             self.browser = Browser(self.market.name, self.port, self.batch_number)
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            self.webCrawler = WebCrawler(self.market, self.port)
 
-    def make_url(self):
-        """
-        return the url of the webdriver inside the docker container.
-
-        :return:
-        """
-        if self.remote is False:
-            return False
-        host = BrowserConstants().host
-        # host = self.browser.browser.name
-        post_fix = BrowserConstants().client_connect
-        return "http://{}:{}/{}".format(host, self.port, post_fix)
 
     def health_check(self, exception: Exception = Exception('None')) -> dict:
         """
@@ -163,7 +153,7 @@ class Worker:
     def regenerate(self):
         self.port = get_open_port()
         self.browser = Browser(self.market.name, self.port, self.batch_number)
-        self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+        self.webCrawler = WebCrawler(self.market, port=get_open_port())
         write_log(LOG.info, thread=self.batch_number, msg="restarted resources")
 
     def get_results(self, results):
@@ -184,7 +174,7 @@ class Worker:
                 webTime = time()
                 self.webCrawler.driver.get(url)
                 write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
-                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.market.wait_for_car))
+                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.params['wait_for_car']))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
                 rawCar = self.webCrawler.get_raw_car()
                 scanned += 1
@@ -229,7 +219,7 @@ class Worker:
         except WebDriverException as e:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)
             traceback.print_exc()
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            self.webCrawler = WebCrawler(self.market.name, port=get_open_port())
             write_log(LOG.info, thread=self.batch_number, msg="restarted_webCrawler")
         except APIError as e:
             write_log(LOG.error, msg="docker_api_error", thread=self.batch_number)
@@ -237,4 +227,4 @@ class Worker:
             self.clean_up()
             traceback.print_exc()
             self.browser = Browser(self.market.name, self.port, self.batch_number)
-            self.webCrawler = WebCrawler(self.market, remote=self.make_url())
+            self.webCrawler = WebCrawler(self.market, port=get_open_port())

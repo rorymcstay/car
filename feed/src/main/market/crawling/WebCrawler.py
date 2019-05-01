@@ -21,6 +21,7 @@ from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
+from settings import markets
 from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
                                                  EndOfQueueNotification,
                                                  QueueServicingError,
@@ -35,31 +36,19 @@ LOG = LogGenerator(log, name='webcrawler')
 
 class WebCrawler:
 
-    def __init__(self, market, remote=False):
+    def __init__(self, name, port):
         """
-        :type remote: Container
-        :type market: Market
         """
-        self.Market = market
+        self.params = markets[name]
+        self.name = name
         self.number_of_pages = None
-        self.last_result = self.Market.home
-        # determining location of driver
-        if remote is False:
-            # local driver
-            self.driver = webdriver.Chrome()
-
-            # adding options to driver
-            arguments = ['--headless']
-            self.chrome_options = Options()
-            self.chrome_options.add_argument(arguments)
-            write_log(LOG.info, msg='local driver initiated', name=self.Market.name)
-        else:
-            url = remote
-            LOG.debug("Starting remote driver for %s", market.name)
-            options = Options()
-            options.add_argument("--headless")
-            self.startWebdriverSession(url, options)
-            write_log(LOG.info,msg='remote driver initiated', webdriver_host=url)
+        self.last_result = None
+        url = "http://{browser_host}:{port}/wd/hub".format(**self.params, port=port)
+        LOG.debug("Starting remote driver for %s", name)
+        options = Options()
+        options.add_argument("--headless")
+        self.startWebdriverSession(url, options)
+        write_log(LOG.info, msg='remote driver initiated', webdriver_host=url)
         self.driver.set_window_size(1120, 900)
         self.history = []
 
@@ -92,11 +81,11 @@ class WebCrawler:
         out = []
         try:
             for script in soup.find_all('script'):
-                if self.Market.json_identifier in script.text:
+                if self.params['json_identifier'] in script.text:
                     tree = JavascriptParser().parse(script.text)
                     script_objects = next(node.right for node in nodevisitor.visit(tree)
                                           if (isinstance(node, ast.Assign) and
-                                              node.left.to_ecma() == self.Market.json_identifier))
+                                              node.left.to_ecma() == self.params['json_identifier']))
                     raw_car = json.loads(script_objects.to_ecma())
                     write_log(LOG.debug,msg='found raw car', url=self.driver.current_url)
                     out.append(raw_car)
@@ -138,7 +127,7 @@ class WebCrawler:
         :return:
         """
         try:
-            queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
+            queue = self.driver.find_elements_by_css_selector(self.params['result_css'])
         except NoSuchElementException as e:
             write_log(LOG.error,msg='failed to find results', url=self.driver.current_url, exception=e.msg)
             raise QueueServicingError(url=self.driver.current_url,
@@ -151,7 +140,7 @@ class WebCrawler:
         if attempt < WebCrawlerConstants().max_attempts:
             if self.result_page():
                 try:
-                    queue = self.driver.find_elements_by_css_selector(self.Market.result_css)
+                    queue = self.driver.find_elements_by_css_selector(self.params['result_css'])
                     item = queue[i]
                     if all(exclude not in item.text for exclude in ignore):
                         return item
@@ -183,7 +172,7 @@ class WebCrawler:
         :param result:
         :return:
         """
-        click = self.safely_click(result, self.Market.wait_for_car, By.CSS_SELECTOR)
+        click = self.safely_click(result, self.params['wait_for_car'], By.CSS_SELECTOR)
         if click:
             try:
                 result = self.get_raw_car()
@@ -195,7 +184,7 @@ class WebCrawler:
             raise ResultCollectionFailure(self.driver.current_url, "Error clicking on result", "click returned false")
 
     def result_page(self):
-        if all(chunk in self.driver.current_url for chunk in self.Market.home):
+        if all(chunk in self.driver.current_url for chunk in self.params['home']):
             return True
         else:
             return False
@@ -203,11 +192,11 @@ class WebCrawler:
     def latest_page(self):
         try:
             self.driver.get(self.last_result)
-            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.Market.result_css))
+            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.params['result_css']))
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(self.Market.result_css), url=self.driver.current_url)
+            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(self.params['result_css']), url=self.driver.current_url)
             return True
 
     def next_page(self, attempts=0):
@@ -227,7 +216,7 @@ class WebCrawler:
                 self.next_page(attempts)
                 return
             try:
-                self.safely_click(button, self.Market.next_page_xpath, By.XPATH, 30)
+                self.safely_click(button, self.params['next_page_xpath'], By.XPATH, 30)
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
@@ -241,9 +230,9 @@ class WebCrawler:
             raise MaxAttemptsReached()
 
     def get_next_button(self):
-        buttons = self.driver.find_elements_by_xpath(self.Market.next_page_xpath)
+        buttons = self.driver.find_elements_by_xpath(self.params['next_page_xpath'])
         for button in buttons:
-            if button.text.upper() == self.Market.next_button_text.upper():
+            if button.text.upper() == self.params['next_button_text'].upper():
                 return button
 
     def update_latest_page(self):
@@ -255,18 +244,18 @@ class WebCrawler:
         start = time()
         content = self.driver.page_source
         cars = []
-        cars.extend(re.findall(r'' + self.Market.result_stub + '[^\"]+', content))
+        cars.extend(re.findall(r'' + self.params['result_stub'] + '[^\"]+', content))
         write_log(LOG.debug, msg="parsed_result_array", length=len(cars), time=time()-start)
         return list(set(cars))
 
     def retrace_steps(self, x):
-        self.driver.get(self.Market.home)
+        self.driver.get(self.params['home'])
         WebDriverWait(self.driver, 2)
         page = 1
         while page < x:
             self.next_page()
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, self.Market.next_page_xpath)))
+                EC.presence_of_element_located((By.XPATH, self.params['next_page_xpath'])))
             page = page + 1
             LOG.info(page)
 

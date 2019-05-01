@@ -1,12 +1,9 @@
 import json
-import os
 from typing import Dict
 
-from flask import request
 from flask_classy import FlaskView, route
 
 from src.main.car.Domain import Encoder
-from src.main.car.Domain import MarketDetails
 from src.main.mapping.Mappers import mappers
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
@@ -23,24 +20,6 @@ class Command(FlaskView):
     database and creates Market objects.
 
     """
-    markets = service.market_details_collection.find()
-
-    for market_definition in markets:
-        marketDetails = MarketDetails(name=market_definition['name'],
-                                      result_css=market_definition['result_css'],
-                                      result_exclude=market_definition['result_exclude'],
-                                      wait_for_car=market_definition['wait_for_car'],
-                                      json_identifier=market_definition['json_identifier'],
-                                      next_page_xpath=market_definition['next_page_xpath'],
-                                      next_button_text='Next',
-                                      result_stub=market_definition['result_stub'],
-                                      sort=market_definition['sort'])
-        name = market_definition['name']
-        marketSet[name] = Market(marketDetails=marketDetails,
-                                 mapper=mappers["_" + name + "_mapper"],
-                                 router=routes["_" + name + "_router"],
-                                 mongo_port=int(os.getenv('MONGO_PORT', 27017)),
-                                 browser_port=int(os.getenv('BROWSER_BASE_PORT', 4444)))
 
     @route('/add_market/<string:name>', methods=['PUT'])
     def addMarket(self, name):
@@ -50,26 +29,12 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        market_definition = request.get_json()
-        exclude = str(market_definition['result_exclude']).split(',')
-        marketDetails = MarketDetails(name=name,
-                                      result_css=market_definition['result_css'],
-                                      result_exclude=exclude,
-                                      wait_for_car=market_definition['wait_for_car'],
-                                      json_identifier=market_definition['json_identifier'],
-                                      next_page_xpath=market_definition['next_page_xpath'],
-                                      next_button_text='Next',
-                                      result_stub=market_definition['result_stub'],
-                                      sort=market_definition['sort'])
         if name in marketSet.keys():
             returnString = [worker.health_check() for worker in marketSet[name].workers]
             return json.dumps(returnString)
-        service.save_market_details(name=marketDetails.name, market_definition=marketDetails)
-        marketSet[name] = Market(marketDetails=marketDetails,
+        marketSet[name] = Market(name=name,
                                  mapper=mappers["_" + name + "_mapper"],
-                                 router=routes["_" + name + "_router"],
-                                 mongo_port=int(os.getenv('MONGO_PORT', 27017)),
-                                 browser_port=int(os.getenv('BROWSER_BASE_PORT', 4444)))
+                                 router=routes["_" + name + "_router"])
         marketSet[name].webCrawler.driver.get(marketSet[name].home)
         return 'ok'
 

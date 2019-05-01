@@ -1,4 +1,5 @@
 import logging as log
+import traceback
 from http.client import RemoteDisconnected
 from time import time, sleep
 
@@ -13,7 +14,7 @@ LOG = LogGenerator(log, name='browser')
 
 class Browser:
 
-    def __init__(self, name, port, batch_number):
+    def __init__(self, name, port, batch_number='main'):
         """
         Starts a browser container
 
@@ -49,9 +50,16 @@ class Browser:
             if e.status_code == 500:
                 write_log(LOG.error, thread=self.batch_number, msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
                 raise e
+            else:
+                write_log(log.error, thread=self.batch_number, msg='Browser container not reachable')
+                raise e
+
         except RemoteDisconnected as e:
             write_log(log.error, thread=self.batch_number, msg='Browser container not reachable')
             self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+        except Exception as e:
+            traceback.print_exc()
+            write_log(thread=self.batch_number, msg="unknown exception occured")
 
     def wait_for_log(self, hub, partial_url):
         """

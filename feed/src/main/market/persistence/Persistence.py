@@ -5,7 +5,7 @@ from datetime import datetime
 
 from bson import ObjectId
 
-from src.main.car.Domain import make_id, MarketDetails
+from src.main.car.Domain import make_id
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
@@ -16,21 +16,17 @@ class Persistence:
     id: ObjectId
     client: MongoService
 
-    def __init__(self, market, marketDetails: MarketDetails):
+    def __init__(self, market):
         """
         This class is a plugin for the Market class providing it with functionality to save progress and details of its
         construction/parameters.
         :param market:
         :param marketDetails:
         """
-        self.marketDetails = marketDetails
+        self.name = market.name
         self.market = market
         self.client = market.mongoService
         self.id = make_id(self.market.name)
-
-    def save_market_details(self):
-        """update its market details to in the mongo database """
-        self.client.save_market_details(name=self.market.name, market_definition=self.marketDetails)
 
     def save_progress(self):
         """saves the last page it went to with date and the cars it collected from that page"""
