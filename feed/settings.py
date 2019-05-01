@@ -24,6 +24,25 @@ markets = {
         "browser_port": 4444,
         "browser_host": "localhost",
         "mongo_host": "localhost",
-        "mongo_port": 27017
+        "mongo_port": 27017,
+    }
+}
+
+results = {
+    "donedeal": {
+        "url": {
+            "nodes": ["card-item"],
+            "single": True,
+            "attr": "href",
+            "nodeType": "a"
+        },
+        "price": {
+            "nodes": ["card-item"],
+            "single": True,
+            "last_nodeType": "name"
+        },
+        "attrs": {
+            "nodes": ["card-item", "src"]
+        }
     }
 }
