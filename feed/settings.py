@@ -47,7 +47,7 @@ markets = {
 results = {
     "donedeal": {
         "url": {
-            "class": [],  # the unique path in terms of classes to the tag containg the info
+            "class": ['card__link'],  # the unique path in terms of classes to the tag containg the info
             "single": True,  # singleton data item or not. eg list of images == False
             "attr": "href", # the name of the attribute if a tag variable (eg. link) if text item let be none
             "name": "a", # the name of the tage to find
@@ -59,22 +59,23 @@ results = {
             "attr": None,
             "name": "span"
         },
-        "attrs": {
-            "class": ["card__body-keyinfo"],
-            "single": False,
-            "attr": None,
-            "name": "li"
-        },
         "imgs": {
             "class": ["card__photo"],
             "single": True,
             "attr": "src",
             "name": "img"
+        },
+        "attrs": {
+            "class": ["card__body-keyinfo"],
+            "single": False,
+            "attr": None,
+            "name": "li"
         }
+
     },
     "piston_heads": {
         "url": {
-            "class": [],
+            "class": ["mainimg"],
             "single": True,
             "attr": "href",
             "name": "a",
