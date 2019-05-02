@@ -37,3 +37,22 @@ def get_photos_in_a_list(name_photos, key, json):
         photos.append(json[name_photos][j][key])
         j=j+1
     return photos
+
+
+def find(key: str, value: dict) -> list:
+    """
+    finds a list of keys in value
+    :type value: dict
+    """
+
+    if hasattr(value,'items'):
+        for k, v in value.items():
+            if k == key:
+                yield v
+            if isinstance(v, dict):
+                for result in find(key, v):
+                    yield result
+            elif isinstance(v, list):
+                for d in v:
+                    for result in find(key, d):
+                        yield result

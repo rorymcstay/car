@@ -4,6 +4,7 @@ import re
 import traceback
 from http.client import RemoteDisconnected
 from time import time, sleep
+from typing import List
 
 import selenium.webdriver as webdriver
 from bs4 import BeautifulSoup
@@ -80,14 +81,18 @@ class WebCrawler:
 
         out = []
         try:
+            # Find all script objects
             for script in soup.find_all('script'):
+                # and check which one containse the unique json variable name
                 if self.params['json_identifier'] in script.text:
+                    # then use the javascript parser to find the variable called json_identifier
                     tree = JavascriptParser().parse(script.text)
                     script_objects = next(node.right for node in nodevisitor.visit(tree)
                                           if (isinstance(node, ast.Assign) and
                                               node.left.to_ecma() == self.params['json_identifier']))
                     raw_car = json.loads(script_objects.to_ecma())
                     write_log(LOG.debug,msg='found raw car', url=self.driver.current_url)
+                    # add it to list to verify its a single result
                     out.append(raw_car)
             if len(out) == 0:
                 ResultCollectionFailure(self.driver.current_url, "Nothing found here", exception=None)
@@ -136,13 +141,13 @@ class WebCrawler:
                                       attempt="Queue length")
         return range(len(queue))
 
-    def get_queue_member(self, i, ignore, attempt=0):
+    def get_queue_member(self, i, ignore: List[str], attempt=0):
         if attempt < WebCrawlerConstants().max_attempts:
             if self.result_page():
                 try:
                     queue = self.driver.find_elements_by_css_selector(self.params['result_css'])
                     item = queue[i]
-                    if all(exclude not in item.text for exclude in ignore):
+                    if all(exclude.capitalize() not in item.text.capitalise() for exclude in ignore):
                         return item
                     else:
                         raise ExcludedResultNotifier()

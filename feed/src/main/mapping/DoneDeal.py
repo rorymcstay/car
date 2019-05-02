@@ -10,7 +10,7 @@ from src.main.utils.LogGenerator import write_log, LogGenerator
 LOG = LogGenerator(log, 'mapping')
 
 
-def DoneDeal(car_old: dict, url: str) -> Car:
+def donedeal(car_old: dict, url: str) -> Car:
     """
     :param car_old: the raw json object
     :return: returns a default car

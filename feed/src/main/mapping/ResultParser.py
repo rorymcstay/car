@@ -5,7 +5,7 @@ from settings import markets, results
 from src.main.car.Domain import Result
 
 
-class ResultParser():
+class ResultParser:
     
     def __init__(self, market, source):
         self.params = markets[market]
@@ -16,27 +16,41 @@ class ResultParser():
     def parseResults(self):
         all = []
         for result in results:
+            items = {}
             for item in self.items:
-                self.getItem(item, result)
-
-            link = result.find("resultUrl")
-            if link is None:
-                link=result.find('a').attrs['href']
-            else:
-                link=link.find('a').attrs['href']
-            img = [item.attrs['href'] for item in result.findAll(name=self.params['resultImg'])]
-            text = result.text
-            all.append(Result({"items": text.split('\n'), "img": img}, url=link))
+                items.update(self.getItem(item, result))
+            all.append(Result(items))
         return all
     
-    def getItem(self, item, start: ResultSet):
-        items = {}
-        for node in self.items[item]["nodes"][:-1]:
-            start = start.findAll()
+    def getItem(self, item: str, start: ResultSet) -> dict:
+        """
+        This function assumes it is starting from a single result node extracted from a list
+        :param item: the name of the item to get in the settings/results dict
+        :param start: the node to start from
+        :return:
+        """
+        path = self.items[item]
 
-        if self.items[item]["single"]:
-            start.find(**{self.params["last_nodeType"]: self.items[item]["nodes"][-1]})
+        for node in path["class"]:
+            start = start.findAll(attrs=node)
+        if path['single'] and path['attr']:
 
+        elif len(path['class']) == 0:
+            start = start.findAll(attrs=path["class"][-1])
+        if path["attr"] is None:
+            if path['single']:
+                finish = start.text
+            else:
+                finish = [st.text for st in start]
+        else:
+            if path['single']:
+                finish = start['attrs'][path['attrs']]
+            else:
+                finish = [t['attrs'][path['attrs']] for t in start]
+        return {item: finish}
 
-    
-    
+if __name__ == '__main__':
+    with open('test.html') as file:
+        source = file.read()
+    rp = ResultParser('donedeal', source)
+    rp.parseResults()

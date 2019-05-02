@@ -1,4 +1,5 @@
-from src.main.mapping.DoneDeal import DoneDeal
+from src.main.mapping.DoneDeal import donedeal
+from src.main.mapping.PistonHeads import Mapper as pistonheads
 
 
 class Mappers(object):
@@ -8,7 +9,8 @@ class Mappers(object):
         in a seperate module and imported to this module. The method is added by defining a field _<name>_mapper to the
         function declaration.
         """
-        self._donedeal_mapper = DoneDeal
+        self.donedeal_mapper = donedeal
+        self.piston_heads_mapper = pistonheads
 
     def __getitem__(self, item):
         return getattr(self, item)

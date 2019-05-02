@@ -1,13 +1,11 @@
 class Routers(object):
 
     def __init__(self):
-
-        donedeal_router = lambda make, model, sort: self.donedeal(make, model, sort)
-        PistonHeads_router = lambda make, model, sort: self.PistonHeads(make, model, sort)
-        self._donedeal_router = donedeal_router
-        self._pistonheads_router = PistonHeads_router
-
-        return
+        """
+        Router class contains methods to focus markets on a particular make/model
+        """
+        self.donedeal_router = lambda make, model, sort: self.donedeal(make, model, sort)
+        self.pistonheads_router = lambda make, model, sort: self.piston_heads(make, model, sort)
 
     def donedeal(self, make, model, sort='publishdate%20desc'):
         """return donedeal  url with specific make model and """
@@ -19,7 +17,7 @@ class Routers(object):
             base = "https://www.donedeal.co.uk/cars?sort="+sort
         return base
 
-    def PistonHeads(self, make, model, sort):
+    def piston_heads(self, make, model, sort):
         return "https://www.pistonheads.com/classifieds?Category=used-cars&SortOptions="+sort
 
     def __getitem__(self, item):

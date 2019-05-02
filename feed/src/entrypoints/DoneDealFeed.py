@@ -9,8 +9,8 @@ print(custom_fig.renderText('DataPumper'))
 
 
 market = Market(name='donedeal',
-                router=routes['_donedeal_router'],
-                mapper=mappers['_donedeal_mapper'])
+                router=routes['donedeal_router'],
+                mapper=mappers['donedeal_mapper'])
 
 # if __name__ == '__main__':
 #     with TerminateProtected(market):

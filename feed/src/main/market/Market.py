@@ -43,7 +43,6 @@ class Market:
                                 model=os.getenv('CAR_MODEL', None),
                                 sort=self.params['sortString'])
         self.mongoConstants = MongoServiceConstants()
-        self.resultParser = ResultParser(self.name)
         self.mongoService = MongoService('{mongo_host}:{mongo_port}'.format(**self.params))
         self.busy = False
 
@@ -127,8 +126,8 @@ class Market:
             x = x + 1
 
     def getListOfResults(self):
-        results = self.resultParser.parseResults(self.webCrawler.driver.page_source)
-
+        parser = ResultParser(self.name, self.webCrawler.driver.page_source)
+        results = parser.parseResults()
         return results
 
     def selectResult(self, id):
@@ -171,7 +170,7 @@ class Market:
         latest_results = self.webCrawler.get_result_array()
         self.workers = [Worker(i, self, True) for i in range(min(max_containers, len(latest_results)))]
 
-    def start_parrallel(self, max_containers, remote=True):
+    def start_parrallel(self, max_containers):
         """
         Start collecting cars with the workers
         :param max_containers:

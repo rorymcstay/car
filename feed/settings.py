@@ -8,9 +8,6 @@ load_dotenv(dotenv_path)
 markets = {
     "donedeal": {
         "result": "card-item",
-        "resultImg": "src",
-        "resultUrl": "card-item",
-        "resultPrice": "card__price",
         "json_identifier": "window.adDetails",
         "result_css": ".card__body",
         "wait_for_car": ".cad-header",
@@ -18,9 +15,28 @@ markets = {
         "next_button_text": "next",
         "result_stub": "https://www.donedeal.co.uk/cars-for-sale/",
         "sortString": "publishdate%20desc",
-        "result_exclude": ["Compare", 'compare', 'insurance', "Insurance"],
+        "result_exclude": ['compare', 'insurance'],
         "home": "https://donedeal.co.uk/cars",
 
+        # External service details
+        "browser_port": 4444,
+        "browser_host": "localhost",
+        "mongo_host": "localhost",
+        "mongo_port": 27017,
+    },
+    "piston_heads": {
+        "result": "result-contain",
+        "json_identifier": "pageDnaObj",
+        "result_css": ".result-contain",
+        "wait_for_car": ".theImage",
+        'next_page_xpath': "//*[@id=\"next\"]",
+        "next_button_text": "next",
+        "result_stub": "https://www.pistonheads.com/classifieds/used-cars/",
+        "sortString": "NewestWithImageFirst", # the sort by newest url string for router
+        "result_exclude": ["we will buy", 'compare', 'insurance'], # ignore commonly named adverts
+        "home": "https://www.pistonheads.com/classifieds?Category=",
+
+        # External service details
         "browser_port": 4444,
         "browser_host": "localhost",
         "mongo_host": "localhost",
@@ -31,18 +47,56 @@ markets = {
 results = {
     "donedeal": {
         "url": {
-            "nodes": ["card-item"],
-            "single": True,
-            "attr": "href",
-            "nodeType": "a"
+            "class": [],  # the unique path in terms of classes to the tag containg the info
+            "single": True,  # singleton data item or not. eg list of images == False
+            "attr": "href", # the name of the attribute if a tag variable (eg. link) if text item let be none
+            "name": "a", # the name of the tage to find
+
         },
         "price": {
-            "nodes": ["card-item"],
+            "class": ["card__price"],
             "single": True,
-            "last_nodeType": "name"
+            "attr": None,
+            "name": "span"
         },
         "attrs": {
-            "nodes": ["card-item", "src"]
+            "class": ["card__body-keyinfo"],
+            "single": False,
+            "attr": None,
+            "name": "li"
+        },
+        "imgs": {
+            "class": ["card__photo"],
+            "single": True,
+            "attr": "src",
+            "name": "img"
+        }
+    },
+    "piston_heads": {
+        "url": {
+            "class": [],
+            "single": True,
+            "attr": "href",
+            "name": "a",
+
+        },
+        "price": {
+            "class": ["card__price"],
+            "single": True,
+            "attr": None,
+            "name": "span"
+        },
+        "attrs": {
+            "class": ["card__body-keyinfo"],
+            "single": False,
+            "attr": None,
+            "name": "li"
+        },
+        "imgs": {
+            "class": ["mainimg"],
+            "single": False,
+            "attr": "src",
+            "name": "img"
         }
     }
 }
