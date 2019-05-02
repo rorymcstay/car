@@ -37,7 +37,6 @@ class ResultParser():
         if self.items[item]["single"]:
             start.find(**{self.params["last_nodeType"]: self.items[item]["nodes"][-1]})
 
-            
-        
+
     
     
