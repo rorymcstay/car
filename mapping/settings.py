@@ -23,13 +23,6 @@ markets = {
         "browser_host": "localhost",
         "mongo_host": "localhost",
         "mongo_port": 27017,
-
-        # Nodes to stream
-        "market_stream": {
-            "class": "card-item",
-            "single": False
-        },
-        "worker_stream": None
     },
     "piston_heads": {
         "result": "result-contain",
@@ -51,7 +44,7 @@ markets = {
     }
 }
 
-results = {
+result_mapping = {
     "donedeal": {
         "url": {
             "class": ['card__link'],  # the unique path in terms of classes to the tag containg the info
@@ -108,7 +101,6 @@ results = {
         }
     }
 }
-
 
 kafka_params = {
     "bootstrap_servers": 'localhost:9092',

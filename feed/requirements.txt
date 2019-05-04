@@ -14,4 +14,4 @@ pyyaml
 docker
 influxdb
 hazelcast-python-client
-
+kafka-python

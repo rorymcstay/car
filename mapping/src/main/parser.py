@@ -1,35 +1,28 @@
-from typing import List, Dict, Any, Union
+import json
 
 import bs4
 from bs4 import Tag, NavigableString
 
-from settings import markets, results
-from src.main.car.Domain import Result
+from settings import markets, result_mapping
 
 
 class ResultParser:
-    
-    items: Union[Result, List[Result], Dict[
-        str, Union[Dict[str, Union[List[str], bool, str]], Dict[str, Union[List[str], bool, None, str]]]], Dict[
-                     str, Union[
-                         Dict[str, Union[List[Any], bool, str]], Dict[str, Union[List[str], bool, None, str]], Dict[
-                             str, Union[List[str], bool, str]]]]]
 
     def __init__(self, market, source):
         self.params = markets[market]
-        self.items = results[market]
+        self.items = result_mapping[market]
         self.soup = bs4.BeautifulSoup(source, "html.parser")
         self.results = self.soup.findAll(attrs=self.params['result'])
-        
+
     def parseResults(self):
         all = []
         for result in self.results:
             items = {}
             for item in self.items:
                 items.update(self.getItem(item, result))
-            all.append(Result(items))
+            all.append(items)
         return all
-    
+
     def getItem(self, item: str, start: Tag) -> dict:
         """
         This function assumes it is starting from a single result node extracted from a list
@@ -74,4 +67,5 @@ if __name__ == '__main__':
     with open('test.html') as file:
         source = file.read()
     rp = ResultParser('piston_heads', source)
-
+    results = rp.parseResults()
+    print(json.dumps([result for result in results], indent=4))

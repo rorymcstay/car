@@ -3,16 +3,18 @@ import os
 import sys
 import traceback
 from time import time
+from typing import List
 
+import bs4
 import numpy
+from kafka import KafkaProducer
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from settings import markets
+from settings import markets, kafka_params
 from src.main.car.Domain import make_id
-from src.main.mapping.ResultParser import ResultParser
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.Exceptions import ExcludedResultNotifier, EndOfQueueNotification, ResultCollectionFailure
@@ -23,14 +25,16 @@ from src.main.market.utils.MongoServiceConstants import MongoServiceConstants
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
+from src.main.utils.Singleton import Singleton
 
 LOG = LogGenerator(log, name='market')
 
-
+@Singleton
 class Market:
 
-    def __init__(self, name, mapper, router):
+    workers: List[Worker]
 
+    def __init__(self, name, mapper, router):
         self.params = markets[name]
         self.browsers = []
         self.workers = []
@@ -51,6 +55,8 @@ class Market:
 
         self.persistence = Persistence(self)
         self.goHome()
+        self.kafkaProducer = KafkaProducer(**kafka_params)
+        self.__instance = self
 
     def specifyMakeModel(self, make, model):
         """
@@ -125,14 +131,14 @@ class Market:
                 self.webCrawler.retrace_steps(x)
             x = x + 1
 
-    def getListOfResults(self):
-        parser = ResultParser(self.name, self.webCrawler.driver.page_source)
-        results = parser.parseResults()
-        return results
-
-    def selectResult(self, id):
-        pass
-
+    def publishListOfResults(self):
+        parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source)
+        results = parser.findAll(self.params['result_stream'])
+        i = 0
+        for result in results:
+            self.kafkaProducer.send(topic="{}_results".format(self.name), value=str(result), key="{}_{}".format(self.webCrawler.driver.current_url, i), headers={"type": "result"})
+            i=+1
+        write_log(LOG.info, msg="published to kafka", results=i)
 
     def getResults(self):
         """
@@ -168,7 +174,7 @@ class Market:
         :return: Updates the workers list
         """
         latest_results = self.webCrawler.get_result_array()
-        self.workers = [Worker(i, self, True) for i in range(min(max_containers, len(latest_results)))]
+        self.workers = [Worker(i, self) for i in range(min(max_containers, len(latest_results)))]
 
     def start_parrallel(self, max_containers):
         """
@@ -267,5 +273,20 @@ class Market:
                 pass
         else:
             pass
+
+    def addWorker(self):
+        """
+        increase the number of workers by one
+
+        :return:
+        """
+        numWorker = len(self.workers)
+        worker = Worker(numWorker + 1, self.name)
+        self.workers.append(worker)
+        return self.workers[-1].health_check()
+
+
+    def removeWorker(self):
+        del self.workers[0]
 
 

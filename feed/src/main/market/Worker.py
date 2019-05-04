@@ -4,7 +4,9 @@ import threading
 import traceback
 from time import time
 
+import bs4
 from docker.errors import APIError
+from kafka import KafkaProducer
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -24,8 +26,9 @@ LOG = LogGenerator(log, name='worker')
 
 class Worker:
     mongoService: MongoService
+    producer: KafkaProducer
 
-    def __init__(self, batch_number, market, remote=False):
+    def __init__(self, batch_number, market):
         """
         Worker class has a browser container and selenium driver which it uses to collect cars in a seperate thread.
 
@@ -42,9 +45,9 @@ class Worker:
         self.batch_number = batch_number
         self.port = get_open_port()
         self.market = market
-        self.remote = remote
         self.browser = Browser(market.name, batch_number=self.batch_number, port=self.port)
         self.webCrawler = WebCrawler(self.market.name, self.port)
+        self.producer = KafkaProducer()
 
     def prepare_batch(self, results, out):
         """
@@ -61,7 +64,7 @@ class Worker:
 
     #   TODO the worker should write to Mongo in batches
 
-    def getCars(self, results: list, out: list = None):
+    def getCars(self, results: list):
         """
         Updates a list provided called out. Intended to be used in a different thread in conjunction with multiple
         workers
@@ -70,41 +73,33 @@ class Worker:
         """
 
         try:
-            batchTime = time()
-            scanned = 0
-            scraped = 0
             for url in results:
-                start = time()
                 webTime = time()
                 self.webCrawler.driver.get(url)
                 write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, self.params['wait_for_car']))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
-                rawCar = self.webCrawler.get_raw_car()
-                scanned += 1
-                if rawCar is False:
-                    write_log(LOG.warning, msg="no_car_found", thread=self.batch_number, time=time() - start,
-                              scraped=scraped,
-                              scanned=scanned, collected=self.cars_collected)
-                    continue
+                if self.params.get("worker_stream") is not None:
+                    parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source)
+                    if self.params.get("worker_stream").get("single"):
+                        self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="car"),
+                                           value=str(parser.find(self.params.get("worker_stream").get("class"))),
+                                           key=self.webCrawler.driver.current_url,
+                                           headers={"type": self.market.name})
+                    else:
+                        items = parser.findAll(self.params.get("worker_stream").get("class"))
+                        i = 0
+                        for item in items:
+                            i += 1
+                            self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="car"),
+                                               value=str(item),
+                                               key="{}_{}".format(self.webCrawler.driver.current_url, i),
+                                               headers={"type": self.market.name})
                 else:
-                    scraped += 1
-                    write_log(LOG.info, msg='car_found', thread=self.batch_number, time=time() - start, scraped=scraped,
-                              scanned=scanned, collected=self.cars_collected)
-                    try:
-                        out.append(self.market.mapper(rawCar[0], url).__dict__())
-                        # TODO check if any car._keys is None
-                    except (KeyError, AttributeError) as e:
-                        write_log(LOG.warning, "mapping_error", thread=self.batch_number, time=time() - start,
-                                  scraped=scraped,
-                                  scanned=scanned, collected=self.cars_collected)
-                    self.cars_collected += 1
-                    write_log(LOG.info, msg="processed_car", thread=self.batch_number, time=time() - start,
-                              scraped=scraped,
-                              scanned=scanned, collected=self.cars_collected)
-            write_log(LOG.info, msg="finished_batch", thread=self.batch_number, time=time() - batchTime,
-                      scraped=scraped,
-                      scanned=scanned, collected=self.cars_collected)
+                    self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="car"),
+                                       value=self.webCrawler.driver.page_source,
+                                       key=self.webCrawler.driver.current_url,
+                                       headers={"type": self.market.name})
 
         except WebDriverException as e:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)

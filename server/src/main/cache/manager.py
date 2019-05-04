@@ -16,7 +16,7 @@ class CacheManager:
 
     client = hazelcast.client.HazelcastClient()
 
-    def __init__(self, name):
+    def __init__(self):
         """
         Create a CacheManager for a data source with name
         Cache managers purpose is to collect ahead of time results users are looking for and persist to a
