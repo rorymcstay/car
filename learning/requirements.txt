@@ -1,0 +1,7 @@
+tensorflow
+numpy
+pymongo
+bson
+pandas
+requests
+sklearn
