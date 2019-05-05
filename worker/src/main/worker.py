@@ -10,7 +10,6 @@ from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-
 from settings import market, mongo_params
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
@@ -93,7 +92,7 @@ class Worker:
                 else:
                     self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="items"),
                                        value=bytes(self.webCrawler.driver.page_source, "utf-8"),
-                                       key=bytes(self.webCrawler.driver.current_url, "utf-8"))
+                                       key=bytes(self.webCrawler.driver.current_url))
 
         except WebDriverException:
             write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)

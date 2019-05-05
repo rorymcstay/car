@@ -1,6 +1,5 @@
 python-dotenv
 pyfiglet
-numpy
 requests
 flask
 flask-classy

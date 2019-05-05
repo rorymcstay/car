@@ -1,6 +1,6 @@
 import logging
-
 from datetime import datetime
+
 from hazelcast import HazelcastClient, ClientConfig
 
 from settings import home_config, hazelcast_params
@@ -12,9 +12,11 @@ class RoutingManager(object):
     hz = HazelcastClient(config)
 
     def getBaseUrl(self, name, make, model, sort="newest"):
+        url=""
         for substring in home_config[name]["skeleton"]:
-            url = "".format(substring).format(make=make, model=model, sort=home_config[name].get("sort_first")[sort])
-            return url
+            url = url + substring
+        url = url.format(make=make, model=model, sort=home_config[name].get("sort_first")[sort])
+        return url
 
     def updateHistory(self, name, value):
         logging.debug("history updated for {}".format(name))

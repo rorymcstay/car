@@ -1,11 +1,10 @@
 import logging as log
-
-import bs4
-import numpy
-import requests as r
-from kafka import KafkaProducer
 from time import time
 from typing import List
+
+import bs4
+import requests as r
+from kafka import KafkaProducer
 
 from settings import kafka_params, routing_params, mongo_params, market
 from src.main.car.Domain import make_id
@@ -16,12 +15,18 @@ from src.main.market.persistence.Persistence import Persistence
 from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
 from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
-from src.main.utils.Singleton import Singleton
 
 LOG = LogGenerator(log, name='market')
 
-@Singleton
+
 class Market:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Market, cls).__new__(
+                cls, *args, **kwargs)
+        return cls._instance
 
     workers: List[Worker] = []
     make = None
@@ -39,32 +44,36 @@ class Market:
     def __init__(self):
         self.browser = Browser()
         self.webCrawler = WebCrawler()
-        self.goHome()
 
     def goHome(self):
         """
         navigate back to the base url
         :return:
         """
-        routingEndpoint = "http://{host}:{port}/getBaseUrl/{name}/{make}/{model}/{sort}".format(make=self.make,
+
+        routingEndpoint = "http://{host}:{port}/routingcontroller/getBaseUrl/{name}/{make}/{model}/{sort}".format(make=self.make,
                                                                                                 model=self.model,
                                                                                                 sort=self.sort,
-                                                                                                **routing_params)
+                                                                                                **routing_params, **market)
         request = r.get(routingEndpoint)
         self.webCrawler.driver.get(request.text)
+        return routingEndpoint
 
     def setHome(self, make=None, model=None, sort=None):
         self.make = make
         self.model = model
         self.sort = sort
+        return self.goHome()
 
     def publishListOfResults(self):
-        parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source)
+        parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source, features="html.parser")
         results = parser.findAll(attrs={"class": market['result_stream'].get("class")})
         i = 0
         for result in results:
-            self.kafkaProducer.send(topic="{}_results".format(self.name), value=str(result), key="{}_{}".format(self.webCrawler.driver.current_url, i), headers={"type": "result"})
-            i=+1
+            data = dict(value=bytes(str(result), 'utf-8'),
+                        key=bytes("{}_{}".format(self.webCrawler.driver.current_url, i), 'utf-8'))
+            self.kafkaProducer.send(topic="{name}_results".format(**market), **data)
+            i = +1
         write_log(LOG.info, msg="published to kafka", results=i)
 
     def getResults(self):
@@ -73,13 +82,14 @@ class Market:
 
         :return:  a list of cars
         """
+        # TODO externalise the delegation of results to nanny service
         out = []
-        threadStart=time()
+        threadStart = time()
         write_log(LOG.debug, msg="workers have started")
         all_results = self.webCrawler.getResultList()
         results = [x for x in [self.verifyBatch(result) for result in all_results] if x is not None]
-        self.results=results
-        batches = numpy.array_split(results, len(self.workers))
+        self.results = results
+        batches = [results[i::len(self.workers)] for i in range(len(self.workers))]
         for (w, b) in zip(self.workers, batches):
             w.prepareBatch(b, out)
         self.webCrawler.nextPage()
@@ -90,7 +100,7 @@ class Market:
         for t in self.workers:
             t.thread.join()
 
-        write_log(LOG.debug, msg="all_threads_returned", time=time()-threadStart)
+        write_log(LOG.debug, msg="all_threads_returned", time=time() - threadStart)
         return out
 
     def makeWorkers(self, max_containers):
@@ -100,7 +110,7 @@ class Market:
         :param max_containers: The maximum number of containers to start
         :return: Updates the workers list
         """
-        self.workers = [Worker(i, self) for i in range(max_containers)]
+        self.workers = [Worker() for i in range(max_containers)]
 
     def startParallel(self, max_containers):
         """
@@ -119,12 +129,13 @@ class Market:
             all_results = self.webCrawler.getResultList()
             results = [x for x in [self.verifyBatch(result) for result in all_results] if x is not None]
             self.results = results
-            batches = numpy.array_split(results, min(max_containers, len(results)))
+            batches = [results[i::max_containers] for i in range(max_containers)]
             write_log(LOG.info, msg="preparing_new_batch", page_number=str(page), size=len(results))
             for (w, b) in zip(self.workers, batches):
                 w.prepareBatch(b)
             self.webCrawler.nextPage()
-            r.put("http://{host}:{port}/updateHistory/{name}".format(name=market["name"], **routing_params), data=self.webCrawler.driver.current_url)
+            r.put("http://{host}:{port}/routingcontroller/updateHistory/{name}".format(name=market["name"], **routing_params),
+                  data=self.webCrawler.driver.current_url)
             write_log(LOG.info, msg="starting_threads")
             for t in self.workers:
                 t.thread.start()
@@ -132,7 +143,7 @@ class Market:
                 t.thread.join()
 
             page += 1
-            write_log(LOG.info, msg='threads_finished', time=time()-threadStart)
+            write_log(LOG.info, msg='threads_finished', time=time() - threadStart)
 
     def tearDownWorkers(self):
         """
@@ -172,7 +183,7 @@ class Market:
         id = make_id(result)
         x = self.mongoService.cars.find_one(dict(_id=id))
         if x is None:
-            y = self.mongoService.db['{}_rawCar'.format(self.name)].find_one(dict(_id=id))
+            y = self.mongoService.db['{name}_rawCar'.format(**market)].find_one(dict(_id=id))
             if y is None:
                 return result
             else:
@@ -186,13 +197,9 @@ class Market:
 
         :return:
         """
-        numWorker = len(self.workers)
-        worker = Worker(numWorker + 1, self.name)
+        worker = Worker()
         self.workers.append(worker)
         return self.workers[-1].healthCheck()
 
-
     def removeWorker(self):
         del self.workers[0]
-
-

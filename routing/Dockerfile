@@ -9,10 +9,13 @@ COPY src ./src
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
+COPY app.py ./app.py
 COPY docker.env ./.env
+
+EXPOSE 5000
 
 # Installing packages
 RUN pip install -r ./requirements.txt
 
 # Entrypoint
-CMD ["python", "./src/main/app.py" ]
+CMD ["python", "./app.py" ]

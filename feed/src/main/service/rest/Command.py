@@ -1,4 +1,5 @@
 import json
+from time import time
 
 from flask_classy import FlaskView, route
 
@@ -7,7 +8,7 @@ from src.main.service.mongo_service.MongoService import MongoService
 
 service = MongoService('{}:{}'.format('0.0.0.0', 27017))
 
-
+market = Market()
 class Command(FlaskView):
     """
     Flask Classy object which contains a dictionary of Markets. On start up it loads market definitions from the
@@ -23,12 +24,12 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        newWorker = Market.instance().addWorker()
+        newWorker = market.addWorker()
         return json.dumps(newWorker)
 
     @route('/removeWorker', methods=['DELETE'])
     def removeWorker(self):
-        Market.instance().removeWorker()
+        market.removeWorker()
         return 'ok'
 
     @route('/makeWorkers/<int:max_containers>', methods=['GET'])
@@ -40,8 +41,8 @@ class Command(FlaskView):
         :param max_containers: max containers
         :return: ok
         """
-        Market.instance().makeWorkers(number)
-        returnString = [{w.batch_number: w.healthCheck()} for w in Market.instance().workers]
+        market.makeWorkers(number)
+        returnString = [{w.batch_number: w.healthCheck()} for w in market.workers]
 
         return json.dumps(returnString)
 
@@ -56,7 +57,7 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        Market.instance().setHome(make, model)
+        market.setHome(make, model)
         return 'ok'
 
     @route("/sortResults/sort")
@@ -73,7 +74,7 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        Market.instance().setHome(sort)
+        market.setHome(sort)
         return 'ok'
 
 
@@ -84,16 +85,27 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        Market.instance().tearDownWorkers()
+        market.tearDownWorkers()
         return 'ok'
 
     @route('/goHome/<string:name>', methods=['GET'])
-    def goHome(self, name):
+    def goHome(self):
         """
         go back to the home page
 
         :param name:
         :return:
         """
-        Market.instance().goHome()
+        market.goHome()
         return 'ok'
+
+    @route("/publishListOfResults")
+    def publishListOfResults(self):
+        start = time()
+        market.publishListOfResults()
+        return "finished in {} seconds".format((time() - start))
+
+    @route("/setHome/<string:make>/<string:model>/<string:sort>")
+    def setHome(self, make, model, sort):
+        home = market.setHome(make, model, sort)
+        return home

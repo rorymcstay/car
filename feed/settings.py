@@ -7,7 +7,7 @@ dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 market = {
-    "name": "name",
+    "name": os.getenv("NAME"),
     'next_page_xpath': "//*[@id]",
     "next_button_text": "next",
     "result_stub": "https://www.donedeal.co.uk/cars-for-sale/",
@@ -42,7 +42,7 @@ markets = {
 }
 
 kafka_params = {
-    "bootstrap_servers": '{}:9092'.format(os.getenv("KAFKA_HOST")),
+    "bootstrap_servers": ['{}'.format(os.getenv("KAFKA_ADDRESS"))],
 }
 
 hazelcast_params = {
@@ -51,7 +51,7 @@ hazelcast_params = {
 
 routing_params = {
     "host": os.getenv("ROUTER_HOST", "localhost"),
-    "port": os.getenv("ROUTER_PORT")
+    "port": os.getenv("ROUTER_PORT"),
 }
 
 mongo_params = {

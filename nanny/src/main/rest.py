@@ -1,11 +1,11 @@
 from flask import request
 from flask_classy import FlaskView, route
 
-from src.main.manager import RoutingManager
+from src.main.delegator import Delegator
 
 
 class RoutingController(FlaskView):
-    routingManager = RoutingManager()
+    routingManager = Delegator()
 
     @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
     def getBaseUrl(self, name, make, model, sort):

@@ -15,12 +15,12 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from urllib3.exceptions import MaxRetryError, ProtocolError
-
-from settings import routing_params, market, browser_params
 from src.main.market.crawling.Exceptions import MaxAttemptsReached
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
+from urllib3.exceptions import MaxRetryError, ProtocolError
+
+from settings import routing_params, market, browser_params
 
 LOGGER.setLevel(log.WARNING)
 LOG = LogGenerator(log, name='webcrawler')

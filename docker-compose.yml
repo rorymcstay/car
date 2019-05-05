@@ -70,11 +70,9 @@ services:
     environment:
      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
      - ALLOW_PLAINTEXT_LISTENER=yes
-     - KAFKA_CREATE_TOPICS="donedeal_cars:1:1;donedeal_results:1:1"
+     - KAFKA_CREATE_TOPICS="donedeal_items:1:1;donedeal_results:1:1"
      - KAFKA_ADVERTISED_PORT=9092
      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-     - KAFKA_ADVERTISED_HOST_NAME=kafka
-
 
     # hazelcast imdg
   hazelcast:
@@ -83,7 +81,7 @@ services:
     volumes:
     - ./cache:/configFolder
     environment:
-    - JAVA_OPTS=-Dhazelcast.config=/configFolder/hazelcast.xml -Dhazelcast.mancenter.url=http://mancenter:8080/mancenter -Dgroup.name=dev -Dgroup.password=dev-pass
+    - JAVA_OPTS=-Dhazelcast.config=/configFolder/hazelcast.xml -Dhazelcast.mancenter.url=http://cache-manager:8080/hazelcast-mancenter -Dgroup.name=dev -Dgroup.password=dev-pass
     ports:
     - 5701:5701
     links:

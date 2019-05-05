@@ -13,4 +13,4 @@ RoutingController.register(app)
 
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(port=os.getenv("PORT"))
+    app.run(port=os.getenv("PORT"), host=os.getenv("HOST"))
