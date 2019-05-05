@@ -1,9 +1,14 @@
 import json
+import traceback
 
 import bs4
 from bs4 import Tag, NavigableString
+from slimit import ast
+from slimit.parser import Parser as JavascriptParser
+from slimit.visitors import nodevisitor
 
 from settings import markets, result_mapping
+from src.main.exceptions import ResultCollectionFailure
 
 
 class ResultParser:
@@ -61,6 +66,45 @@ class ResultParser:
             else:
                 finish = None
         return {item: finish}
+
+
+class ObjectParser:
+
+    def __init__(self, market, source):
+        self.params = markets[market]
+        self.items = result_mapping[market]
+        self.soup = bs4.BeautifulSoup(source, "html.parser")
+        self.results = self.soup.findAll(attrs=self.params['result'])
+
+    def getItem(self, url):
+        """
+        attempts to get car from current page source, returns to the previous set of results in which it came
+        :return:
+        """
+        soup = self.soup
+
+        out = []
+        try:
+            # Find all script objects
+            for script in soup.find_all('script'):
+                # and check which one containse the unique json variable name
+                if self.params['json_identifier'] in script.text:
+                    # then use the javascript parser to find the variable called json_identifier
+                    tree = JavascriptParser().parse(script.text)
+                    script_objects = next(node.right for node in nodevisitor.visit(tree)
+                                          if (isinstance(node, ast.Assign) and
+                                              node.left.to_ecma() == self.params['json_identifier']))
+                    raw_car = json.loads(script_objects.to_ecma())
+                    # add it to list to verify its a single result
+                    out.append(raw_car)
+            if len(out) == 0:
+                raise ResultCollectionFailure(reason="Nothing found here", url=url, exception=None)
+        except Exception as e:
+            traceback.print_exc()
+            error = ResultCollectionFailure(url=url, reason=traceback.format_exc(),exception=e)
+            raise error
+        return out
+
 
 
 if __name__ == '__main__':

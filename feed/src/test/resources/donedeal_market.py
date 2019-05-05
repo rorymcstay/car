@@ -6,11 +6,11 @@ from resources.TestConstants import TestConstants
 from src.main.mapping.Mappers import mappers
 from src.main.market.Market import Market
 from src.main.market.crawling.Routers import routes
-from src.main.market.utils.BrowserConstants import get_open_port
+from src.main.market.utils.BrowserConstants import getOpenPort
 
-mongo_port = get_open_port()
+mongo_port = getOpenPort()
 client=docker.client.from_env()
-browser_port=get_open_port()
+browser_port=getOpenPort()
 client.containers.run(TestConstants(mongo_port).mongo_image, detach=True,
                       name=TestConstants(mongo_port).mongo_name,
                       ports={'27017/tcp': mongo_port},

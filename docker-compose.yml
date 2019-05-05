@@ -32,24 +32,75 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - mongo
+      - kafka
+      - router
     ports:
-      - "5001:5001"
+      - "5001:500"
     env_file:
       - feed/docker.properties.env
     stop_grace_period: 5m
 
+  router:
+    container_name: router
+    build: "./routing"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - mongo
+    - hazelcast
+    ports:
+    - "5002:5000"
+    env_file:
+    - feed/docker.properties.env
+    stop_grace_period: 5m
+
   zookeeper:
     image: 'bitnami/zookeeper:latest'
+    container_name: zookeeper
     ports:
     - '2181:2181'
     environment:
     - ALLOW_ANONYMOUS_LOGIN=yes
+
   kafka:
     image: 'bitnami/kafka:latest'
+    container_name: kafka
     ports:
      - '9092:9092'
     environment:
      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
      - ALLOW_PLAINTEXT_LISTENER=yes
      - KAFKA_CREATE_TOPICS="donedeal_cars:1:1;donedeal_results:1:1"
+     - KAFKA_ADVERTISED_PORT=9092
+     - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+     - KAFKA_ADVERTISED_HOST_NAME=kafka
+
+
+    # hazelcast imdg
+  hazelcast:
+    image: hazelcast/hazelcast
+    container_name: hazelcast
+    volumes:
+    - ./cache:/configFolder
+    environment:
+    - JAVA_OPTS=-Dhazelcast.config=/configFolder/hazelcast.xml -Dhazelcast.mancenter.url=http://mancenter:8080/mancenter -Dgroup.name=dev -Dgroup.password=dev-pass
+    ports:
+    - 5701:5701
+    links:
+    - "management-center:mancenter"
+
+    #management center
+  management-center:
+    image: hazelcast/management-center
+    container_name: cache-manager
+    # persisting mancenter users db folder to local disk
+    volumes:
+    - ~/mancenter3.8:/mancenter-3.8
+    environment:
+    - MANCENTER_DATA=/mancenter-3.8
+    # enable REST interface on management center
+    # http://docs.hazelcast.org/docs/latest-development/manual/html/Management/Clustered_REST_via_Management_Center.html
+    - JAVA_OPTS=-Dhazelcast.mc.rest.enabled=true
+    ports:
+    - 8080:8080
 

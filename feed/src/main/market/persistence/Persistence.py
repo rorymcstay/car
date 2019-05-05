@@ -1,9 +1,9 @@
 import logging as log
 import os
 import traceback
-from datetime import datetime
 
 from bson import ObjectId
+from datetime import datetime
 
 from src.main.car.Domain import make_id
 from src.main.service.mongo_service.MongoService import MongoService
@@ -55,12 +55,12 @@ class Persistence:
             self.market.webCrawler.driver.get(self.market.home)
             return
         self.market.webCrawler.driver.get(progress['latest_result_page'])
-        results = self.market.webCrawler.get_result_array()
+        results = self.market.webCrawler.getResultList()
         try:
             count=0
             while os.getenv('TRAVERSE', False) and not any(result in progress['latest_processing'] for result in results):
-                self.market.webCrawler.next_page()
-                results_to_check = self.market.webCrawler.get_result_array()
+                self.market.webCrawler.nextPage()
+                results_to_check = self.market.webCrawler.getResultList()
                 if any(result in progress['latest_processing'] for result in results_to_check):
                     write_log(LOG.info, msg="found_last_place", attemps=count)
                     return

@@ -3,3 +3,5 @@
 *.log
 */*.iml
 *.iml
+python36
+python37

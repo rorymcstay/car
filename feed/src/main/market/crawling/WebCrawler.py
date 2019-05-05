@@ -1,13 +1,10 @@
-import json
 import logging as log
-import re
 import traceback
 from http.client import RemoteDisconnected
-from time import time, sleep
-from typing import List
 
+import re
+import requests as r
 import selenium.webdriver as webdriver
-from bs4 import BeautifulSoup
 from selenium.common.exceptions import (TimeoutException,
                                         StaleElementReferenceException,
                                         NoSuchElementException, WebDriverException)
@@ -17,17 +14,11 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.remote.remote_connection import LOGGER
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from slimit import ast
-from slimit.parser import Parser as JavascriptParser
-from slimit.visitors import nodevisitor
+from time import time, sleep
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from settings import markets
-from src.main.market.crawling.Exceptions import (ExcludedResultNotifier,
-                                                 EndOfQueueNotification,
-                                                 QueueServicingError,
-                                                 ResultCollectionFailure,
-                                                 MaxAttemptsReached)
+from settings import routing_params, market, browser_params
+from src.main.market.crawling.Exceptions import MaxAttemptsReached
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
@@ -37,15 +28,13 @@ LOG = LogGenerator(log, name='webcrawler')
 
 class WebCrawler:
 
-    def __init__(self, name, port):
+    def __init__(self):
         """
         """
-        self.params = markets[name]
-        self.name = name
         self.number_of_pages = None
         self.last_result = None
-        url = "http://{browser_host}:{port}/wd/hub".format(**self.params, port=port)
-        LOG.debug("Starting remote driver for %s", name)
+        url = "http://{host}:{port}/wd/hub".format(**browser_params)
+        LOG.debug("Starting remote webdriver ")
         options = Options()
         options.add_argument("--headless")
         self.startWebdriverSession(url, options)
@@ -68,43 +57,7 @@ class WebCrawler:
             else:
                 raise e
 
-    def get_raw_car(self, source=None):
-        """
-        attempts to get car from current page source, returns to the previous set of results in which it came
-        :return:
-        """
-        if source is not None:
-            source = source
-        else:
-            source = self.driver.page_source
-        soup = BeautifulSoup(source, 'html.parser')
-
-        out = []
-        try:
-            # Find all script objects
-            for script in soup.find_all('script'):
-                # and check which one containse the unique json variable name
-                if self.params['json_identifier'] in script.text:
-                    # then use the javascript parser to find the variable called json_identifier
-                    tree = JavascriptParser().parse(script.text)
-                    script_objects = next(node.right for node in nodevisitor.visit(tree)
-                                          if (isinstance(node, ast.Assign) and
-                                              node.left.to_ecma() == self.params['json_identifier']))
-                    raw_car = json.loads(script_objects.to_ecma())
-                    write_log(LOG.debug,msg='found raw car', url=self.driver.current_url)
-                    # add it to list to verify its a single result
-                    out.append(raw_car)
-            if len(out) == 0:
-                ResultCollectionFailure(self.driver.current_url, "Nothing found here", exception=None)
-                write_log(LOG.debug, msg='could not find raw car', url=self.driver.current_url)
-                return False
-        except Exception as e:
-            traceback.print_exc()
-            error = ResultCollectionFailure(self.driver.current_url, None, e)
-            raise error
-        return out
-
-    def safely_click(self, item, wait_for, selector, timeout=3):
+    def safelyClick(self, item, wait_for, selector, timeout=3):
         """
         identifies xpath and css path to button. Attempts
         This function handles cases where the click is intercepted or the webpage did not load as expected
@@ -126,145 +79,78 @@ class WebCrawler:
         except WebDriverException:
             return False
 
-    def get_queue_range(self):
-        """
-        creates an array of web elements to process
-        :return:
-        """
-        try:
-            queue = self.driver.find_elements_by_css_selector(self.params['result_css'])
-        except NoSuchElementException as e:
-            write_log(LOG.error,msg='failed to find results', url=self.driver.current_url, exception=e.msg)
-            raise QueueServicingError(url=self.driver.current_url,
-                                      reason="NoSuchElementException",
-                                      exception=e,
-                                      attempt="Queue length")
-        return range(len(queue))
-
-    def get_queue_member(self, i, ignore: List[str], attempt=0):
-        if attempt < WebCrawlerConstants().max_attempts:
-            if self.result_page():
-                try:
-                    queue = self.driver.find_elements_by_css_selector(self.params['result_css'])
-                    item = queue[i]
-                    if all(exclude.capitalize() not in item.text.capitalise() for exclude in ignore):
-                        return item
-                    else:
-                        raise ExcludedResultNotifier()
-                except IndexError as e:
-                    raise EndOfQueueNotification(i, e, attempt)
-                except NoSuchElementException as e:
-                    self.latest_page()
-                    raise QueueServicingError(attempt=attempt,
-                                              url=self.driver.current_url,
-                                              reason="get_queue_member returned false",
-                                              exception=e)
-            else:
-                LOG.error("Queue member called outside of context")
-                raise QueueServicingError(attempt=attempt,
-                                          url=self.driver.current_url,
-                                          reason="Queue member called outside of context",
-                                          exception="result_page() was false")
-        else:
-            raise QueueServicingError(attempt=attempt,
-                                      url=self.driver.current_url,
-                                      reason="Reached Maximum attempts",
-                                      exception=None)
-
-    def get_result(self, result):
-        """
-        This clicks on a web element and gets raw car then exits back to the page it was once on.
-        :param result:
-        :return:
-        """
-        click = self.safely_click(result, self.params['wait_for_car'], By.CSS_SELECTOR)
-        if click:
-            try:
-                result = self.get_raw_car()
-                url = self.driver.current_url
-                return {'result': result, 'url': url}
-            except ResultCollectionFailure as e:
-                raise e
-        else:
-            raise ResultCollectionFailure(self.driver.current_url, "Error clicking on result", "click returned false")
-
-    def result_page(self):
-        if all(chunk in self.driver.current_url for chunk in self.params['home']):
+    def resultPage(self):
+        if all(chunk in self.driver.current_url for chunk in market['home']):
             return True
         else:
             return False
 
-    def latest_page(self):
+    def latestPage(self):
         try:
             self.driver.get(self.last_result)
-            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, self.params['result_css']))
+            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, market['result_css']))
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(self.params['result_css']), url=self.driver.current_url)
+            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(market['result_css']), url=self.driver.current_url)
             return True
 
-    def next_page(self, attempts=0):
-        if attempts < WebCrawlerConstants().max_attempts and self.result_page():
+    def nextPage(self, attempts=0):
+        if attempts < WebCrawlerConstants().max_attempts and self.resultPage():
             try:
-                button = self.get_next_button()
+                button = self.getNextButton()
             except NoSuchElementException as e:
                 attempts = attempts + 1
                 sleep(attempts)
                 LOG.warning("Could not find next button %s", e.msg)
-                self.next_page(attempts)
+                self.nextPage(attempts)
                 return
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
                 LOG.warning("Could not find next button %s", e.msg)
-                self.next_page(attempts)
+                self.nextPage(attempts)
                 return
             try:
-                self.safely_click(button, self.params['next_page_xpath'], By.XPATH, 30)
+                self.safelyClick(button, market['next_page_xpath'], By.XPATH, 30)
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
                 LOG.error("Could not click on next button %s", e.msg)
-                self.next_page(attempts)
+                self.nextPage(attempts)
             except TimeoutException:
                 LOG.warning("Next page did not load as expected")
-            self.update_latest_page()
+            r.put("http://{host}:{port}/updateHistory/{name}".format(name=market["name"], **routing_params), data=self.driver.current_url)
             return
         else:
             raise MaxAttemptsReached()
 
-    def get_next_button(self):
-        buttons = self.driver.find_elements_by_xpath(self.params['next_page_xpath'])
+    def getNextButton(self):
+        buttons = self.driver.find_elements_by_xpath(market['next_page_xpath'])
         for button in buttons:
-            if button.text.upper() == self.params['next_button_text'].upper():
+            if button.text.upper() == market['next_button_text'].upper():
                 return button
 
-    def update_latest_page(self):
-        """Updates the latest pages and stores it in the WebCrawler.last_result field and updates history"""
-        self.last_result = self.driver.current_url
-        self.history.append(self.last_result)
-
-    def get_result_array(self):
+    def getResultList(self):
         start = time()
         content = self.driver.page_source
         cars = []
-        cars.extend(re.findall(r'' + self.params['result_stub'] + '[^\"]+', content))
+        cars.extend(re.findall(r'' + market['result_stub'] + '[^\"]+', content))
         write_log(LOG.debug, msg="parsed_result_array", length=len(cars), time=time()-start)
         return list(set(cars))
 
     def retrace_steps(self, x):
-        self.driver.get(self.params['home'])
+        self.driver.get(market['home'])
         WebDriverWait(self.driver, 2)
         page = 1
         while page < x:
-            self.next_page()
+            self.nextPage()
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, self.params['next_page_xpath'])))
+                EC.presence_of_element_located((By.XPATH, market['next_page_xpath'])))
             page = page + 1
             LOG.info(page)
 
-    def health_indicator(self):
+    def healthIndicator(self):
         try:
             return self.driver.current_url
         except (WebDriverException, Exception) as e:

@@ -34,7 +34,7 @@ class Query(FlaskView):
         :return:
         """
         returnString = marketSet[name].getResults()
-        marketSet[name].webCrawler.next_page()
+        marketSet[name].webCrawler.nextPage()
         return json.dumps(returnString, cls=Encoder)
 
 

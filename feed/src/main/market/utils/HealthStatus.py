@@ -1,6 +1,6 @@
 
-class HealthStatus(object):
-    def __init__(self, exception: Exception, browser: str, webCrawler: str):
+class HealthStatus(dict):
+    def __init__(self, exception: Exception, browser: str, webCrawler: str, **kwargs):
         """
         The HealthStatus class
 
@@ -8,10 +8,11 @@ class HealthStatus(object):
         :param browser:
         :param webcrawler:
         """
+        super().__init__(**kwargs)
         self.exception = exception
         self.exception_message = exception.args[0]
         self.browser = browser
         self.webCrawler = webCrawler
 
-    def __dict__(self):
+    def __repr__(self):
         return dict(exception_message=self.exception_message, browser=self.browser, webCrawler=self.webCrawler)

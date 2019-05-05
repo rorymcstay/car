@@ -15,7 +15,7 @@ class Command(FlaskView):
 
     """
 
-    @route('/add_market', methods=['PUT'])
+    @route('/addWorker', methods=['PUT'])
     def addWorker(self):
         """
         create a new Market Object and save to database
@@ -26,13 +26,13 @@ class Command(FlaskView):
         newWorker = Market.instance().addWorker()
         return json.dumps(newWorker)
 
-    @route('/remove_worker', methods=['DELETE'])
+    @route('/removeWorker', methods=['DELETE'])
     def removeWorker(self):
         Market.instance().removeWorker()
         return 'ok'
 
-    @route('/initialise/<int:max_containers>', methods=['GET'])
-    def initialise(self, name, max_containers):
+    @route('/makeWorkers/<int:max_containers>', methods=['GET'])
+    def makeWorkers(self, number):
         """
         create workers for a market. Client specifies the number of containers to use
 
@@ -40,14 +40,14 @@ class Command(FlaskView):
         :param max_containers: max containers
         :return: ok
         """
-        Market.instance().makeWorkers(max_containers)
-        returnString = [{w.batch_number: w.health_check()} for w in marketSet[name].workers]
+        Market.instance().makeWorkers(number)
+        returnString = [{w.batch_number: w.healthCheck()} for w in Market.instance().workers]
 
         return json.dumps(returnString)
 
 
-    @route('/reset/<string:make>/<string:model>', methods=['GET'])
-    def specifyMakeModel(self, make, model, name):
+    @route('/specifyMakeModel/<string:make>/<string:model>', methods=['GET'])
+    def specifyMakeModel(self, make, model):
         """
         Change the make and model to be collected
 
@@ -56,21 +56,39 @@ class Command(FlaskView):
         :param name:
         :return:
         """
-        Market.instance().specifyMakeModel(make, model)
+        Market.instance().setHome(make, model)
         return 'ok'
 
-    @route('/clean_up_resources', methods=['GET'])
+    @route("/sortResults/sort")
+    def sortResults(self, sort):
+        """
+        Change the sort order - one of
+            1. highest
+            2. lowest
+            3. old
+            4. new
+
+        :param make:
+        :param model:
+        :param name:
+        :return:
+        """
+        Market.instance().setHome(sort)
+        return 'ok'
+
+
+    @route('/cleanUpResources', methods=['GET'])
     def cleanUpResources(self):
         """
         Destroy Workers' resources
         :param name:
         :return:
         """
-        Market.instance().tear_down_workers()
+        Market.instance().tearDownWorkers()
         return 'ok'
 
-    @route('/reset/<string:name>', methods=['GET'])
-    def reset(self, name):
+    @route('/goHome/<string:name>', methods=['GET'])
+    def goHome(self, name):
         """
         go back to the home page
 

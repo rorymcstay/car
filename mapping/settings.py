@@ -17,12 +17,6 @@ markets = {
         "sortString": "publishdate%20desc",
         "result_exclude": ['compare', 'insurance'],
         "home": "https://donedeal.co.uk/cars",
-
-        # External service details
-        "browser_port": 4444,
-        "browser_host": "localhost",
-        "mongo_host": "localhost",
-        "mongo_port": 27017,
     },
     "piston_heads": {
         "result": "result-contain",
@@ -35,12 +29,6 @@ markets = {
         "sortString": "NewestWithImageFirst", # the sort by newest url string for router
         "result_exclude": ["we will buy", 'compare', 'insurance'], # ignore commonly named adverts
         "home": "https://www.pistonheads.com/classifieds?Category=",
-
-        # External service details
-        "browser_port": 4444,
-        "browser_host": "localhost",
-        "mongo_host": "localhost",
-        "mongo_port": 27017,
     }
 }
 

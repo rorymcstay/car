@@ -1,7 +1,6 @@
-from typing import List, Dict, Any, Union
-
 import bs4
 from bs4 import Tag, NavigableString
+from typing import List, Dict, Any, Union
 
 from settings import markets, results
 from src.main.car.Domain import Result
@@ -16,10 +15,10 @@ class ResultParser:
                              str, Union[List[str], bool, str]]]]]
 
     def __init__(self, market, source):
-        self.params = markets[market]
+        market = markets[market]
         self.items = results[market]
         self.soup = bs4.BeautifulSoup(source, "html.parser")
-        self.results = self.soup.findAll(attrs=self.params['result'])
+        self.results = self.soup.findAll(attrs=market['result'])
         
     def parseResults(self):
         all = []

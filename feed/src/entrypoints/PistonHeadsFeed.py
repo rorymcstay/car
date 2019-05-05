@@ -30,6 +30,6 @@ market = Market(name='pistonheads',
 if __name__ == '__main__':
     with TerminateProtected(market):
         market.webCrawler.driver.get(market.home)
-        market.start_parrallel(int(os.getenv('THREADS', 5)))
+        market.startParallel(int(os.getenv('THREADS', 5)))
 
 

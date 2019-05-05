@@ -1,4 +1,4 @@
-FROM python:3.6.8
+FROM python:3.6-alpine
 
 RUN mkdir -p /home
 

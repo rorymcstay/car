@@ -1,12 +1,13 @@
 import logging as log
 import traceback
 from http.client import RemoteDisconnected
-from time import time, sleep
 
 import docker
 from docker.errors import APIError, ImageNotFound
+from time import time
 
-from src.main.market.utils.BrowserConstants import BrowserConstants, get_open_port
+from settings import browser_params
+from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
 from src.main.utils.LogGenerator import write_log, LogGenerator
 
 LOG = LogGenerator(log, name='browser')
@@ -14,52 +15,36 @@ LOG = LogGenerator(log, name='browser')
 
 class Browser:
 
-    def __init__(self, name, port, batch_number='main'):
-        """
-        Starts a browser container
+    client = docker.client.from_env()
 
-        :type name: string
-        :param name: the name of the container
-        :param batch_number: the batch it is inteded to process
-        """
-
-        self.batch_number = batch_number
-        self.name = name
-
-        self.client = docker.client.from_env()
+    def __init__(self, port=browser_params['port']):
         self.port = port
         try:
-            self.browser = self.client.containers.run(BrowserConstants().browser_image,
+            self.browser = self.client.containers.run(self.client.images.get(browser_params['image']),
                                                       detach=True,
-                                                      name='browser-{}-{}-{}'.format(name, batch_number, self.port),
+                                                      name='worker-{}'.format(self.port),
                                                       ports={'4444/tcp': self.port},
                                                       remove=True)
-            write_log(LOG.info, msg='starting_browser', thread=self.batch_number)
+            write_log(LOG.info, msg='starting_browser', thread="worker-{port}".format(port=self.port))
         except ImageNotFound as e:
-            write_log(LOG.error, thread=self.batch_number, msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
+            write_log(LOG.error, thread="worker-{port}".format(port=self.port), msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
             raise e
         except APIError as e:
             if e.status_code == 409:
-                self.browser = self.client.containers.get('browser-{}-{}-{}'.format(self.name, batch_number, self.port))
-                try:
-                    self.browser.restart()
-                    sleep(5)
-                except:
-                    write_log(LOG.error, thread=self.batch_number, msg="couldn't start browser image", port=self.port, status_code=e.status_code, exception=e.explanation)
-                    return
-            if e.status_code == 500:
-                write_log(LOG.error, thread=self.batch_number, msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
+                self.browser = self.client.containers.get('worker-{port}'.format(port=self.port))
+            elif e.status_code == 500:
+                write_log(LOG.error, thread="worker-{port}".format(port=self.port), msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
                 raise e
             else:
-                write_log(log.error, thread=self.batch_number, msg='Browser container not reachable')
+                write_log(log.error, thread="worker-{port}".format(port=self.port), msg='Browser container not reachable')
                 raise e
 
         except RemoteDisconnected as e:
-            write_log(log.error, thread=self.batch_number, msg='Browser container not reachable')
+            write_log(log.error, thread="worker-{port}".format(port=self.port), msg='Browser container not reachable')
             self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
         except Exception as e:
             traceback.print_exc()
-            write_log(thread=self.batch_number, msg="unknown exception occured")
+            write_log(thread="worker-{port}".format(port=self.port), msg="unknown exception occured")
 
     def wait_for_log(self, hub, partial_url):
         """
@@ -82,13 +67,13 @@ class Browser:
             self.browser.restart()
             self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
         except APIError:
-            write_log(LOG.warning,thread=self.batch_number, msg="Couldn't restart container. Killing it")
+            write_log(LOG.warning,thread="worker-{port}".format(port=self.port), msg="Couldn't restart container. Killing it")
             try:
-                self.port = get_open_port()
+                self.port = getOpenPort()
                 self.browser.remove()
-                self.__init__(self.name, self.port, self.batch_number)
+                self = self.__init__(self.port)
             except APIError as e:
-                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread=self.batch_number, explanation=e.explanation)
+                write_log(LOG.warning, msg="couldn't remove container after failing to restart it", thread="worker-{port}".format(port=self.port), explanation=e.explanation)
 
 
     # TODO handle RemoteDisconnected
@@ -99,11 +84,11 @@ class Browser:
         try:
             self.browser.kill()
         except APIError as e:
-            write_log(LOG.warning,msg="Couldn't quit container %s problem was: %s", thread=self.batch_number, explanation=e.explanation)
+            write_log(LOG.warning,msg="Couldn't quit container %s problem was: %s", thread="worker-{port}".format(port=self.port), explanation=e.explanation)
         try:
             self.browser.remove()
         except APIError as e:
-            write_log(LOG.warning, msg="failed to remove container", thread=self.batch_number, explanation=e.explanation)
+            write_log(LOG.warning, msg="failed to remove container", thread="worker-{port}".format(port=self.port), explanation=e.explanation)
 
     def health_indicator(self):
         """

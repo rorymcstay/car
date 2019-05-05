@@ -1,6 +1,7 @@
 import logging
-import signal
 import sys
+
+import signal
 
 
 class TerminateProtected:
@@ -29,7 +30,7 @@ class TerminateProtected:
 
     def __exit__(self, type, value, traceback):
         if self.killed:
-            self.market.tear_down_workers()
+            self.market.tearDownWorkers()
         self.market.browser.quit()
         signal.signal(signal.SIGINT, self.old_sigint)
         signal.signal(signal.SIGTERM, self.old_sigterm)
