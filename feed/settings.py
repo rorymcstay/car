@@ -1,3 +1,4 @@
+import logging
 import os
 from os.path import join, dirname
 
@@ -63,4 +64,9 @@ browser_params = {
     "port": 4444,
     "host": os.getenv("BROWSER_HOST", "127.0.0.1"),
     "image": os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome:3.141.59')
+}
+
+logging_params = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO
 }

@@ -1,6 +1,8 @@
 version: '2'
 
 services:
+  #TODO formalise the environment variable files for docker and local
+  # local.env and docker.env should be committed
 
   mongo:
     image: mongo
@@ -58,21 +60,28 @@ services:
     image: 'bitnami/zookeeper:latest'
     container_name: zookeeper
     ports:
-    - '2181:2181'
+      - '2181:2181'
     environment:
-    - ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
 
   kafka:
     image: 'bitnami/kafka:latest'
     container_name: kafka
     ports:
      - '9092:9092'
+     - '29092:29092'
+    links:
+      - zookeeper:zk
     environment:
-     - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-     - ALLOW_PLAINTEXT_LISTENER=yes
-     - KAFKA_CREATE_TOPICS="donedeal_items:1:1;donedeal_results:1:1"
-     - KAFKA_ADVERTISED_PORT=9092
-     - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CREATE_TOPICS="my-topic"
+      - KAFKA_ADVERTISED_PORT=9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
     # hazelcast imdg
   hazelcast:

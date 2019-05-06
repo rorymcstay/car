@@ -14,3 +14,5 @@ docker
 influxdb
 hazelcast-python-client
 kafka-python
+
+pip and nar cherry bakewell almond butter

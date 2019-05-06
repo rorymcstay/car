@@ -10,16 +10,10 @@ COPY src/entrypoints ./src/entrypoints
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
-
-# The following is to install numpy on full linux
-RUN apt-get dist-upgrade
-RUN apt-get update
-RUN apt-get -y install libc-dev
-RUN apt-get -y install build-essential
-RUN pip install -U pip
+COPY app.py ./app.py
 
 # Installing packages
 RUN pip install -r ./requirements.txt
 
 # Entrypoint
-CMD ["python", "./src/entrypoints/DoneDealFeed.py" ]
+CMD ["python", "./app.py" ]
