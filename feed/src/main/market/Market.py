@@ -6,14 +6,11 @@ import bs4
 import requests as r
 from kafka import KafkaProducer
 
-from settings import kafka_params, routing_params, mongo_params, market_params
+from settings import kafka_params, routing_params, market_params
 from src.main.car.Domain import make_id
 from src.main.market.Worker import Worker
-from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.persistence.Persistence import Persistence
-from src.main.market.utils.IgnoredExceptions import IgnoredExceptions
-from src.main.service.mongo_service.MongoService import MongoService
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
 LOG = LogGenerator(log, name='market')
@@ -39,10 +36,8 @@ class Market:
     browsers = []
 
     kafkaProducer = KafkaProducer(**kafka_params)
-    mongoService = MongoService('{host}:{port}'.format(**mongo_params))
 
     def __init__(self):
-        self.browser = Browser()
         self.webCrawler = WebCrawler()
 
     def goHome(self):
@@ -87,9 +82,8 @@ class Market:
         threadStart = time()
         write_log(LOG.debug, msg="workers have started")
         all_results = self.webCrawler.getResultList()
-        results = [x for x in [self.verifyBatch(result) for result in all_results] if x is not None]
-        self.results = results
-        batches = [results[i::len(self.workers)] for i in range(len(self.workers))]
+        self.results = all_results
+        batches = [all_results[i::len(self.workers)] for i in range(len(self.workers))]
         for (w, b) in zip(self.workers, batches):
             w.prepareBatch(b, out)
         self.webCrawler.nextPage()
@@ -158,21 +152,6 @@ class Market:
             w.stop = True
         for w in self.workers:
             w.browser.quit()
-
-    def garbageCollection(self):
-        """
-        does a health check and restarts those with exceptions
-        :return:
-        """
-        write_log(log=LOG.debug, msg='starting_garbage_collection')
-        for worker in self.workers:
-            if worker.health.exception == 'None':
-                pass
-            elif any(isinstance(ignore, type(worker.health.exception)) for ignore in IgnoredExceptions().ignore):
-                pass
-            else:
-                worker.cleanUp()
-                worker.regenerate()
 
     def verifyBatch(self, result):
         """

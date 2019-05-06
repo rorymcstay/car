@@ -9,7 +9,7 @@ COPY src ./src
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
-COPY docker.properties.env ./.env
+COPY docker.env ./.env
 COPY app.py ./app.py
 
 # Installing packages

@@ -1,29 +1,15 @@
-from flask import request
 from flask_classy import FlaskView, route
 
-from src.main.delegator import Delegator
+from src.main.container import ContainerManager
 
 
-class RoutingController(FlaskView):
-    routingManager = Delegator()
+class ContainerController(FlaskView):
+    containerManager = ContainerManager()
 
-    @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
-    def getBaseUrl(self, name, make, model, sort):
-        """
-        return a json payload of dataframe.
-        :return:
-        """
-        return self.routingManager.getBaseUrl(name, make, model, sort)
+    @route("getContainer/<int:port>", methods=["GET"])
+    def getContainer(self, port):
+        return self.containerManager.getContainer(port)
 
-    @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
-    def getBaseUrl(self, name, make, model, sort):
-        """
-        return a json payload of dataframe.
-        :return:
-        """
-        return self.routingManager.getBaseUrl(name, make, model, sort)
-
-
-    @route("updateHistory/name")
-    def updateHistory(self, name):
-        self.routingManager.updateHistory(name, request.data)
+    @route("freeContainer/<int:port>", methods=["GET"])
+    def freeContainer(self, port):
+        return self.containerManager.freeContainer(port)

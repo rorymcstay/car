@@ -22,3 +22,8 @@ class RoutingManager(object):
         logging.debug("history updated for {}".format(name))
         self.hz.get_map("{}-history".format(name)).put(value=value, key=datetime.now())
         return "added one item to the cache"
+
+
+
+
+

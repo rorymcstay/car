@@ -4,9 +4,11 @@ from http.client import RemoteDisconnected
 from time import time
 
 import docker
+import requests
 from docker.errors import APIError, ImageNotFound
+from docker.models.containers import Container
 
-from settings import browser_params
+from settings import browser_params, routing_params, market_params
 from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
 from src.main.utils.LogGenerator import write_log, LogGenerator
 
@@ -15,11 +17,22 @@ LOG = LogGenerator(log, name='browser')
 
 class Browser:
 
+    browser: Container
     client = docker.client.from_env()
 
     def __init__(self, port=browser_params['port']):
         # TODO handle: selenium.common.exceptions.WebDriverException: Message: unknown error: session deleted because of page crash
         self.port = port
+        portAssigned = requests.put("http://{host}:{port}/{api_prefix}/assignNewPort/{port}".format(port=self.port,
+                                                                                                    **routing_params,
+                                                                                                    **market_params))
+        if portAssigned.text.isdigit():
+            self.port = portAssigned.text
+            self.browser = self.client.containers.get('worker-{port}'.format(port=self.port))
+            self.browser.restart()
+            self.wait_for_log(self.browser, BrowserConstants().CONTAINER_QUIT)
+            self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+
         try:
             self.browser = self.client.containers.run(self.client.images.get(browser_params['image']),
                                                       detach=True,
@@ -27,13 +40,13 @@ class Browser:
                                                       ports={'4444/tcp': self.port},
                                                       remove=True)
             write_log(LOG.info, msg='starting_browser', thread="worker-{port}".format(port=self.port))
+            self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+
         except ImageNotFound as e:
             write_log(LOG.error, thread="worker-{port}".format(port=self.port), msg="couldn't find image for hub", port=self.port, status_code=e.status_code, explanation=e.explanation)
             raise e
         except APIError as e:
-            if e.status_code == 409:
-                self.browser = self.client.containers.get('worker-{port}'.format(port=self.port))
-            elif e.status_code == 500:
+            if e.status_code == 500:
                 write_log(LOG.error, thread="worker-{port}".format(port=self.port), msg="docker server error running docker browser image", status_code=e.status_code,port=self.port)
                 raise e
             else:
@@ -43,6 +56,7 @@ class Browser:
         except RemoteDisconnected as e:
             write_log(log.error, thread="worker-{port}".format(port=self.port), msg='Browser container not reachable')
             self.wait_for_log(self.browser, BrowserConstants().CONTAINER_SUCCESS)
+
         except Exception as e:
             traceback.print_exc()
             write_log(thread="worker-{port}".format(port=self.port), msg="unknown exception occured")

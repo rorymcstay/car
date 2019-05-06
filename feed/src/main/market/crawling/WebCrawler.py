@@ -17,7 +17,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from settings import routing_params, market_params, browser_params
+from settings import routing_params, market_params, browser_params, nanny_params
 from src.main.market.crawling.Exceptions import MaxAttemptsReached
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
@@ -30,7 +30,9 @@ class WebCrawler:
 
     def __init__(self, port=browser_params["port"]):
         """
+
         """
+        port = r.get("http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params, submission_port=port)).text
         self.number_of_pages = None
         self.last_result = None
         url = "http://{host}:{port}/wd/hub".format(host=browser_params["host"], port=port)

@@ -4,6 +4,7 @@ import traceback
 from time import time
 
 import bs4
+import requests
 from docker.errors import APIError
 from kafka import KafkaProducer
 from selenium.common.exceptions import WebDriverException
@@ -11,8 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from settings import market_params, mongo_params
-from src.main.market.browser.Browser import Browser
+from settings import market_params, mongo_params, nanny_params
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
 from src.main.market.utils.HealthStatus import HealthStatus
@@ -42,7 +42,6 @@ class Worker:
         self.port = getOpenPort()
         self.batch_number = self.port
         self.market = market_params
-        self.browser = Browser(port=self.port)
         self.webCrawler = WebCrawler(self.port)
         self.producer = KafkaProducer()
 
@@ -103,9 +102,8 @@ class Worker:
         except APIError as e:
             write_log(LOG.error, msg="docker_api_error", thread=self.batch_number)
             traceback.print_exc()
-            self.cleanUp()
+            requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))
             traceback.print_exc()
-            self.browser = Browser(self.port)
             self.webCrawler = WebCrawler(self.port)
 
     def healthCheck(self, exception: Exception = Exception('None')) -> HealthStatus:
@@ -118,7 +116,6 @@ class Worker:
         try:
             write_log(LOG.info, thread=self.batch_number, msg="doing_health_check")
             health = HealthStatus(exception,
-                                  browser=self.browser.health_indicator(),
                                   webCrawler=self.webCrawler.healthIndicator())
             write_log(log=LOG.debug, msg='health_check', **health)
             self.health = health
@@ -126,18 +123,3 @@ class Worker:
         except Exception as e:
             write_log(LOG.error, thread=self.batch_number,
                       msg="error taking health check for because {}".format(e.args[0]))
-
-    def cleanUp(self):
-        """
-        kill resources
-
-        :return:
-        """
-        self.browser.quit()
-        write_log(LOG.info, thread=self.batch_number, msg="cleaning up")
-
-    def regenerate(self):
-        self.port = getOpenPort()
-        self.browser = Browser(self.port)
-        self.webCrawler = WebCrawler(self.port)
-        write_log(LOG.info, thread=self.batch_number, msg="restarted resources")

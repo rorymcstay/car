@@ -23,3 +23,15 @@ class RoutingController(FlaskView):
         :return:
         """
         self.routingManager.updateHistory(name, request.data)
+
+    @route("assignNewPort/<int:port>", methods=["PUT"])
+    def assignNewPort(self, name):
+        """
+        return a json payload of dataframe.
+        :return:
+        """
+        return self.routingManager.assignPort(name)
+
+    @route("freeContainer/<int:port>", methods=["PUT"])
+    def freeContainer(self, port):
+        return self.freeContainer(port)

@@ -28,6 +28,7 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
 
   feed:
+    
     container_name: feed
     build: "./feed"
     volumes:
@@ -36,24 +37,30 @@ services:
       - mongo
       - kafka
       - router
+      - nanny
     ports:
-      - "5001:500"
-    env_file:
-      - feed/docker.properties.env
+      - "5001:5000"
     stop_grace_period: 5m
 
   router:
     container_name: router
     build: "./routing"
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
     - mongo
     - hazelcast
     ports:
     - "5002:5000"
-    env_file:
-    - feed/docker.properties.env
+    stop_grace_period: 5m
+
+  nanny:
+    container_name: nanny
+    build: "./nanny"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - hazelcast
+    ports:
+    - "5003:5000"
     stop_grace_period: 5m
 
   zookeeper:

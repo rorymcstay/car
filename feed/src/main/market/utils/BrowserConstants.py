@@ -6,6 +6,7 @@ import socket
 class BrowserConstants:
     CONTAINER_TIMEOUT = int(os.getenv('CONTAINER_TIMEOUT', 10))
     CONTAINER_SUCCESS = 'Selenium Server is up and running on port'
+    CONTAINER_QUIT = "Shutdown complete"
     client_connect = 'wd/hub'
     worker_timeout = int(os.getenv('WORKER_TIMEOUT', '3'))
 

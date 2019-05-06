@@ -65,8 +65,14 @@ browser_params = {
     "port": 4444,
     "host": os.getenv("BROWSER_HOST", "127.0.0.1"),
     "image": os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome:3.141.59')
+
 }
 
+nanny_params = {
+    "host": os.getenv("NANNY_HOST", "localhost"),
+    "port": os.getenv("NANNY_PORT"),
+    "api_prefix": "containercontroller"
+}
 logging_params = {
         "debug": logging.DEBUG,
         "info": logging.INFO
