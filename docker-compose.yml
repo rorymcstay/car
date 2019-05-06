@@ -74,7 +74,7 @@ services:
       - zookeeper:zk
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CREATE_TOPICS="my-topic"
+      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items"
       - KAFKA_ADVERTISED_PORT=9092
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT

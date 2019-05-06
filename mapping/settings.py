@@ -1,3 +1,4 @@
+import os
 from os.path import join, dirname
 
 from dotenv import load_dotenv
@@ -91,5 +92,9 @@ result_mapping = {
 }
 
 kafka_params = {
-    "bootstrap_servers": 'localhost:9092',
+    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],
+}
+
+hazelcast_params = {
+    "host": os.getenv("HAZELCAST_HOST"), "port": os.getenv("HAZELCAST_PORT", 5701)
 }

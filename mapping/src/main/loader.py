@@ -14,4 +14,7 @@ class ResultLoader():
     def consumeResults(self):
         self.kafkaConsumer.subscribe(self.markets)
         for message in self.kafkaConsumer:
-            message
+            print(message)
+
+if __name__ == '__main__':
+    rl = ResultLoader()

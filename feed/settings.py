@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
-market = {
+market_params = {
     "name": os.getenv("NAME"),
     'next_page_xpath': "//*[@id]",
     "next_button_text": "next",
@@ -53,6 +53,7 @@ hazelcast_params = {
 routing_params = {
     "host": os.getenv("ROUTER_HOST", "localhost"),
     "port": os.getenv("ROUTER_PORT"),
+    "api_prefix": "routingcontroller"
 }
 
 mongo_params = {

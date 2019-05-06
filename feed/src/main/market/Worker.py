@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
-from settings import market, mongo_params
+from settings import market_params, mongo_params
 from src.main.market.browser.Browser import Browser
 from src.main.market.crawling.WebCrawler import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
@@ -41,7 +41,7 @@ class Worker:
         self.mongoService = MongoService('{host}:{port}'.format(**mongo_params))
         self.port = getOpenPort()
         self.batch_number = self.port
-        self.market = market
+        self.market = market_params
         self.browser = Browser(port=self.port)
         self.webCrawler = WebCrawler(self.port)
         self.producer = KafkaProducer()
@@ -74,24 +74,24 @@ class Worker:
                 webTime = time()
                 self.webCrawler.driver.get(url)
                 write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
-                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, market['wait_for_car']))
+                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, market_params['wait_for_car']))
                 WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
-                if market.get("worker_stream") is not None:
+                if market_params.get("worker_stream") is not None:
                     parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source)
-                    if market.get("worker_stream").get("single"):
-                        self.producer.send(topic="{name}_{type}".format(**market, type="items"),
-                                           value=bytes(str(parser.find(market.get("worker_stream").get("class"))), 'utf-8'),
+                    if market_params.get("worker_stream").get("single"):
+                        self.producer.send(topic="{name}-{type}".format(**market_params, type="items"),
+                                           value=bytes(str(parser.find(market_params.get("worker_stream").get("class"))), 'utf-8'),
                                            key=bytes(self.webCrawler.driver.current_url, 'utf-8'))
                     else:
-                        items = parser.findAll(market.get("worker_stream").get("class"))
+                        items = parser.findAll(market_params.get("worker_stream").get("class"))
                         i = 0
                         for item in items:
                             i += 1
-                            self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="items"),
+                            self.producer.send(topic="{name}-{type}".format(name=self.market.name, type="items"),
                                                value=bytes(item, 'utf-8'),
                                                key=bytes("{}_{}".format(self.webCrawler.driver.current_url, i), 'utf-8'))
                 else:
-                    self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="items"),
+                    self.producer.send(topic="{name}-{type}".format(name=self.market.name, type="items"),
                                        value=bytes(self.webCrawler.driver.page_source, "utf-8"),
                                        key=bytes(self.webCrawler.driver.current_url, "utf-8"))
 

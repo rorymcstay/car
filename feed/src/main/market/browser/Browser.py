@@ -1,10 +1,10 @@
 import logging as log
 import traceback
 from http.client import RemoteDisconnected
+from time import time
 
 import docker
 from docker.errors import APIError, ImageNotFound
-from time import time
 
 from settings import browser_params
 from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
@@ -18,6 +18,7 @@ class Browser:
     client = docker.client.from_env()
 
     def __init__(self, port=browser_params['port']):
+        # TODO handle: selenium.common.exceptions.WebDriverException: Message: unknown error: session deleted because of page crash
         self.port = port
         try:
             self.browser = self.client.containers.run(self.client.images.get(browser_params['image']),

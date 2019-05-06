@@ -10,20 +10,16 @@ class RoutingController(FlaskView):
     @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
     def getBaseUrl(self, name, make, model, sort):
         """
-        return a json payload of dataframe.
+        return the home adress of market to the client
         :return:
         """
         return self.routingManager.getBaseUrl(name, make, model, sort)
 
-    @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
-    def getBaseUrl(self, name, make, model, sort):
-        """
-        return a json payload of dataframe.
-        :return:
-        """
-        return self.routingManager.getBaseUrl(name, make, model, sort)
-
-
-    @route("updateHistory/name")
+    @route("updateHistory/<string:name>")
     def updateHistory(self, name):
+        """
+        Add a history item to the cache of the caller
+        :param name:
+        :return:
+        """
         self.routingManager.updateHistory(name, request.data)

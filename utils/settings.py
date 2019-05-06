@@ -17,7 +17,7 @@ hazelcast_params = {
 routing_params = {
     "host": os.getenv("ROUTER_HOST", "localhost"),
     "port": os.getenv("ROUTER_PORT"),
-    "name": os.getenv("NAME")
+    "api_prefix": "routingcontroller"
 }
 
 mongo_params = {

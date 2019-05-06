@@ -6,7 +6,7 @@ import bs4
 import requests as r
 from kafka import KafkaProducer
 
-from settings import kafka_params, routing_params, mongo_params, market
+from settings import kafka_params, routing_params, mongo_params, market_params
 from src.main.car.Domain import make_id
 from src.main.market.Worker import Worker
 from src.main.market.browser.Browser import Browser
@@ -51,10 +51,10 @@ class Market:
         :return:
         """
 
-        routingEndpoint = "http://{host}:{port}/routingcontroller/getBaseUrl/{name}/{make}/{model}/{sort}".format(make=self.make,
-                                                                                                model=self.model,
-                                                                                                sort=self.sort,
-                                                                                                **routing_params, **market)
+        routingEndpoint = "http://{host}:{port}/{api_prefix}/getBaseUrl/{name}/{make}/{model}/{sort}".format(make=self.make,
+                                                                                                             model=self.model,
+                                                                                                             sort=self.sort,
+                                                                                                             **routing_params, **market_params)
         request = r.get(routingEndpoint)
         self.webCrawler.driver.get(request.text)
         return routingEndpoint
@@ -67,13 +67,13 @@ class Market:
 
     def publishListOfResults(self):
         parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source, features="html.parser")
-        results = parser.findAll(attrs={"class": market['result_stream'].get("class")})
+        results = parser.findAll(attrs={"class": market_params['result_stream'].get("class")})
         i = 0
         for result in results:
             data = dict(value=bytes(str(result), 'utf-8'),
                         key=bytes("{}_{}".format(self.webCrawler.driver.current_url, i), 'utf-8'))
-            self.kafkaProducer.send(topic="{name}_results".format(**market), **data)
-            i = +1
+            self.kafkaProducer.send(topic="{name}-results".format(**market_params), **data)
+            i += 1
         write_log(LOG.info, msg="published to kafka", results=i)
 
     def getResults(self):
@@ -134,7 +134,7 @@ class Market:
             for (w, b) in zip(self.workers, batches):
                 w.prepareBatch(b)
             self.webCrawler.nextPage()
-            r.put("http://{host}:{port}/routingcontroller/updateHistory/{name}".format(name=market["name"], **routing_params),
+            r.put("http://{host}:{port}/{api_prefix}/updateHistory/{name}".format(name=market_params["name"], **routing_params),
                   data=self.webCrawler.driver.current_url)
             write_log(LOG.info, msg="starting_threads")
             for t in self.workers:
@@ -183,7 +183,7 @@ class Market:
         id = make_id(result)
         x = self.mongoService.cars.find_one(dict(_id=id))
         if x is None:
-            y = self.mongoService.db['{name}_rawCar'.format(**market)].find_one(dict(_id=id))
+            y = self.mongoService.db['{name}_rawCar'.format(**market_params)].find_one(dict(_id=id))
             if y is None:
                 return result
             else:
