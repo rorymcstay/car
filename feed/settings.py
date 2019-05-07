@@ -43,7 +43,7 @@ markets = {
 }
 
 kafka_params = {
-    "bootstrap_servers": ['{}'.format(os.getenv("KAFKA_ADDRESS"))],
+    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],
 }
 
 hazelcast_params = {

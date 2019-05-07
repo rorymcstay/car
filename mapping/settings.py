@@ -62,33 +62,7 @@ result_mapping = {
         }
 
     },
-    "piston_heads": {
-        "url": {
-            "class": ["mainimg"],
-            "single": True,
-            "attr": "href",
-            "name": "a",
 
-        },
-        "price": {
-            "class": ["card__price"],
-            "single": True,
-            "attr": None,
-            "name": "span"
-        },
-        "attrs": {
-            "class": ["card__body-keyinfo"],
-            "single": False,
-            "attr": None,
-            "name": "li"
-        },
-        "imgs": {
-            "class": ["mainimg"],
-            "single": False,
-            "attr": "src",
-            "name": "img"
-        }
-    }
 }
 
 kafka_params = {
@@ -97,4 +71,32 @@ kafka_params = {
 
 hazelcast_params = {
     "host": os.getenv("HAZELCAST_HOST"), "port": os.getenv("HAZELCAST_PORT", 5701)
+}
+
+pistonheads= {
+    "url": {
+        "class": ["mainimg"],
+        "single": True,
+        "attr": "href",
+        "name": "a",
+
+    },
+    "price": {
+        "class": ["card__price"],
+        "single": True,
+        "attr": None,
+        "name": "span"
+    },
+    "attrs": {
+        "class": ["card__body-keyinfo"],
+        "single": False,
+        "attr": None,
+        "name": "li"
+    },
+    "imgs": {
+        "class": ["mainimg"],
+        "single": False,
+        "attr": "src",
+        "name": "img"
+    }
 }

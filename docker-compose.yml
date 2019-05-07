@@ -40,7 +40,7 @@ services:
       - nanny
     ports:
       - "5001:5000"
-    stop_grace_period: 5m
+    stop_grace_period: 5s
 
   router:
     container_name: router
@@ -50,7 +50,7 @@ services:
     - hazelcast
     ports:
     - "5002:5000"
-    stop_grace_period: 5m
+    stop_grace_period: 5s
 
   nanny:
     container_name: nanny
@@ -61,7 +61,20 @@ services:
     - hazelcast
     ports:
     - "5003:5000"
-    stop_grace_period: 5m
+    stop_grace_period: 5s
+
+  mapper:
+    container_name: mapper
+    build: "./mapping"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - hazelcast
+    - kafka
+    ports:
+    - "5004:5000"
+    stop_grace_period: 5s
+
 
   zookeeper:
     image: 'bitnami/zookeeper:latest'

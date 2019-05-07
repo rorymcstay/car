@@ -7,7 +7,7 @@ from src.main.manager import CacheManager
 
 class ResultLoader():
 
-    markets = ["{market}_results".format(market=market) for market in result_mapping['topics'].keys()]
+    markets = ["{market}-results".format(market=market) for market in result_mapping.keys()]
     cacheManager = CacheManager()
     kafkaConsumer = KafkaConsumer(**kafka_params)
 

@@ -1,6 +1,9 @@
 import logging
 
 import hazelcast
+from hazelcast import ClientConfig, HazelcastClient
+
+from settings import hazelcast_params
 
 config = hazelcast.ClientConfig()
 config.group_config.name = 'car-cluster'
@@ -12,8 +15,9 @@ config.network_config.addresses.append('localhost:5702')
 
 
 class CacheManager:
-
-    client = hazelcast.client.HazelcastClient()
+    config = ClientConfig()
+    config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
+    client = HazelcastClient(config)
 
     def insertResult(self, name, result):
         """

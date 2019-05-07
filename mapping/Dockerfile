@@ -6,11 +6,11 @@ WORKDIR /home
 
 # Copying over necessary files
 COPY src ./src
-COPY src/entrypoints ./src/entrypoints
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
 COPY app.py ./app.py
+COPY docker.env ./.env
 
 # Installing packages
 RUN pip install -r ./requirements.txt
