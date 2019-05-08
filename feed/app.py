@@ -1,26 +1,43 @@
 import logging
 import os
+import signal
+from time import time
 
+import requests
 from flask import Flask
 from pyfiglet import Figlet
 
-from settings import market_params, logging_params
+from settings import feed_params, routing_params
 from src.main.market.Market import Market
 from src.main.service.rest.Command import Command
 
-logging.basicConfig(level=logging_params[os.getenv("LOG_LEVEL")])
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logging.FileHandler('/var/tmp/myapp.log')
 
+class GracefulKiller:
+    kill_now = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.kill_now = True
 
 
 market: Market = Market()
 market.setHome(make="Porsche", model="Cayenne", sort="newest")
 if __name__ == '__main__':
+    killer = GracefulKiller()
     custom_fig = Figlet()
-    print(custom_fig.renderText('{name}-feed'.format(**market_params)))
+    print(custom_fig.renderText('{name}-feed'.format(**feed_params)))
+    timeStart = time()
     while True:
         market.publishListOfResults()
         market.webCrawler.nextPage()
+        logging.info(msg="published page to kafka results in {}".format(time() - timeStart))
+        if killer.kill_now:
+            market.webCrawler.driver.close()
+            requests.get("https://{host}:{port}/{api_prefix}/{}".format(market.webCrawler.port, **routing_params))
 
 app = Flask(__name__)
 Command.register(app)

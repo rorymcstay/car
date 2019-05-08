@@ -86,6 +86,8 @@ class ContainerManager:
         workerPorts = self.hz.get_map("browser_containers")
         item = Container(port=port, active="no")
         workerPorts.replace(key=port, value=item)
+        browser = self.client.containers.get('worker-{port}'.format(port=port))
+        browser.restart()
         # TODO handle restarting container here - test that you can use a container after running for some time
         return "ok"
 

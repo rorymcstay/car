@@ -5,3 +5,4 @@ bson
 requests
 python-dotenv
 docker
+pymongo

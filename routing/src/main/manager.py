@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from time import time
 
 from hazelcast import HazelcastClient, ClientConfig
 
@@ -20,7 +20,7 @@ class RoutingManager(object):
 
     def updateHistory(self, name, value):
         logging.debug("history updated for {}".format(name))
-        self.hz.get_map("{}-history".format(name)).put(value=value, key=datetime.now())
+        self.hz.get_map("{}-history".format(name)).put(value=value, key=time())
         return "added one item to the cache"
 
 

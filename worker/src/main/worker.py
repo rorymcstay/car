@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import signal
 import socket
 import traceback
 from http.client import RemoteDisconnected
@@ -21,10 +22,28 @@ from urllib3.exceptions import ProtocolError
 from settings import stream_params, kafka_params, nanny_params, browser_params
 
 
+class GracefulKiller:
+    kill_now = False
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.kill_now = True
+
+
+def getOpenPort():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
 class Worker:
 
     producer = KafkaProducer(**kafka_params)
-    consumer: KafkaConsumer = KafkaConsumer(**kafka_params, value_deserializer=lambda m: json.loads(m.decode('ascii')))
+    consumer: KafkaConsumer = KafkaConsumer(**kafka_params, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
     port = None
 
     def __init__(self):
@@ -37,8 +56,7 @@ class Worker:
         """
 
         port = getOpenPort()
-        port = requests.get("http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params,
-                                                                                                      submission_port=port)).text
+        port = requests.get("http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params, submission_port=port)).text
         self.driver = self.startWebdriverSession(port)
 
 
@@ -76,7 +94,7 @@ class Worker:
 
         :param results: the batch or urls
         """
-        stream = stream_params[streamName]
+        stream = stream_params["{}-items".format(streamName)]
         try:
             webTime = time()
             self.driver.get(url)
@@ -105,16 +123,11 @@ class Worker:
             self.__init__()
 
     def main(self):
-        self.consumer.subscribe([name for name in stream_params.keys()])
+        killer = GracefulKiller()
+        self.consumer.subscribe(["worker-queue"])
+
         while 1:
             for item in self.consumer:
                 self.publishObject(url=item.value["url"], streamName=item.topic.split("-")[0])
-
-
-def getOpenPort():
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(("", 0))
-    s.listen(1)
-    port = s.getsockname()[1]
-    s.close()
-    return port
+            if killer.kill_now:
+                requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))

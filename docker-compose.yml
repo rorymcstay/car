@@ -17,7 +17,7 @@ services:
       - "5001:5000"
     stop_grace_period: 5s
     env_file:
-      - feed/docker.env
+      - feed_platform/docker.env
 
   worker:
     container_name: worker
@@ -27,7 +27,7 @@ services:
     - nanny
     stop_grace_period: 5s
     env_file:
-    - worker/docker.env
+    - feed_platform/docker.env
 
   router:
     container_name: router
@@ -37,6 +37,8 @@ services:
     ports:
     - "5002:5000"
     stop_grace_period: 5s
+    env_file:
+      - feed_platform/docker.env
 
   nanny:
     container_name: nanny
@@ -48,6 +50,8 @@ services:
     ports:
     - "5003:5000"
     stop_grace_period: 5s
+    env_file:
+      - feed_platform/docker.env
 
   mapper:
     container_name: mapper
@@ -61,7 +65,7 @@ services:
     - "5004:5000"
     stop_grace_period: 5s
     env_file:
-    - mapping/docker.env
+    - feed_platform/docker.env
 
   mongo:
     image: mongo
@@ -104,7 +108,7 @@ services:
       - zookeeper:zk
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items"
+      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items;worker-queue"
       - KAFKA_ADVERTISED_PORT=9092
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
@@ -118,7 +122,7 @@ services:
     image: hazelcast/hazelcast
     container_name: hazelcast
     volumes:
-    - ./config:/configFolder
+    - ./feed_platform:/configFolder
     environment:
     - JAVA_OPTS=-Dhazelcast.config=/configFolder/hazelcast.xml -Dhazelcast.mancenter.url=http://cache-manager:8080/hazelcast-mancenter -Dgroup.name=dev -Dgroup.password=dev-pass
     ports:

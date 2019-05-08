@@ -22,4 +22,4 @@ class RoutingController(FlaskView):
         :param name:
         :return:
         """
-        self.routingManager.updateHistory(name, request.data)
+        return self.routingManager.updateHistory(name, request.data)

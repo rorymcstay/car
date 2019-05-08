@@ -17,7 +17,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from settings import routing_params, market_params, browser_params, nanny_params
+from settings import routing_params, feed_params, browser_params, nanny_params
 from src.main.market.crawling.exceptions import MaxAttemptsReached
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
@@ -40,6 +40,7 @@ class WebCrawler:
         options = Options()
         options.add_argument("--headless")
         self.startWebdriverSession(url, options)
+        self.port = port
         write_log(LOG.info, msg='remote driver initiated', webdriver_host=url)
         self.driver.set_window_size(1120, 900)
         self.history = []
@@ -83,7 +84,7 @@ class WebCrawler:
             return False
 
     def resultPage(self):
-        if all(chunk in self.driver.current_url for chunk in market_params['home']):
+        if all(chunk in self.driver.current_url for chunk in feed_params['base_url']):
             return True
         else:
             return False
@@ -91,11 +92,11 @@ class WebCrawler:
     def latestPage(self):
         try:
             self.driver.get(self.last_result)
-            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, market_params['result_css']))
+            element_present = EC.presence_of_all_elements_located((By.CSS_SELECTOR, feed_params['wait_for']))
             WebDriverWait(self.driver, 5).until(element_present)
             return True
         except TimeoutException:
-            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(market_params['result_css']), url=self.driver.current_url)
+            write_log(LOG.warning, msg="{} did not load as expected or unusually slowly".format(feed_params['wait_for']), url=self.driver.current_url)
             return True
 
     def nextPage(self, attempts=0):
@@ -115,7 +116,7 @@ class WebCrawler:
                 self.nextPage(attempts)
                 return
             try:
-                self.safelyClick(button, market_params['next_page_xpath'], By.XPATH, 30)
+                self.safelyClick(button, feed_params['next_page_xpath'], By.XPATH, 30)
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
@@ -123,33 +124,33 @@ class WebCrawler:
                 self.nextPage(attempts)
             except TimeoutException:
                 LOG.warning("Next page did not load as expected")
-            r.put("http://{host}:{port}/{api_prefix}/updateHistory/{name}".format(name=market_params["name"], **routing_params), data=self.driver.current_url)
+            r.put("http://{host}:{port}/{api_prefix}/updateHistory/{name}".format(name=feed_params["name"], **routing_params), data=self.driver.current_url)
             return
         else:
             raise MaxAttemptsReached()
 
     def getNextButton(self):
-        buttons = self.driver.find_elements_by_xpath(market_params['next_page_xpath'])
+        buttons = self.driver.find_elements_by_xpath(feed_params['next_page_xpath'])
         for button in buttons:
-            if button.text.upper() == market_params['next_button_text'].upper():
+            if button.text.upper() == feed_params['next_button_text'].upper():
                 return button
 
     def getResultList(self):
         start = time()
         content = self.driver.page_source
         cars = []
-        cars.extend(re.findall(r'' + market_params['result_stub'] + '[^\"]+', content))
+        cars.extend(re.findall(r'' + feed_params['result_stub'] + '[^\"]+', content))
         write_log(LOG.debug, msg="parsed_result_array", length=len(cars), time=time()-start)
         return list(set(cars))
 
     def retrace_steps(self, x):
-        self.driver.get(market_params['home'])
+        self.driver.get(feed_params['home'])
         WebDriverWait(self.driver, 2)
         page = 1
         while page < x:
             self.nextPage()
             WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, market_params['next_page_xpath'])))
+                EC.presence_of_element_located((By.XPATH, feed_params['next_page_xpath'])))
             page = page + 1
             LOG.info(page)
 

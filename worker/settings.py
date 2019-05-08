@@ -1,10 +1,5 @@
 import os
-from os.path import join, dirname
 
-from dotenv import load_dotenv
-
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
 
 stream_params = {
     "donedeal":{
@@ -15,12 +10,12 @@ stream_params = {
 }
 
 browser_params = {
-    "host": os.getenv("BROWSER_CONTAINER_HOST", "localhost")
+    "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal")
 }
 
 nanny_params = {
     "host": os.getenv("NANNY_HOST", "localhost"),
-    "port": os.getenv("NANNY_PORT"),
+    "port": os.getenv("FLASK_PORT", 5000),
     "api_prefix": "containercontroller"
 }
 
