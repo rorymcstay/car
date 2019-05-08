@@ -5,3 +5,4 @@
 *.iml
 python36
 python37
+.DS_Store

@@ -15,3 +15,30 @@ This repo contains the individual services of an automated data collection tool.
 1. Decompose html source to a dataframe of nodes and meta info.
 2. Consume html df into a neural network to predict which node contains the target field
 
+# Development
+
+To run development of docker-compose on an ec2 instance:
+1. run the following to make an instance
+
+        docker-machine create --driver amazonec2 --amazonec2-instance-type t2.medium --amazonec2-region us-west-1 car
+
+3. Ensure that it is running
+
+        docker-machine ls
+
+2. then do
+
+        eval $(docker-machine env car)
+
+3. To get IP details
+
+        docker-machine inspect
+
+3. To stop the running instance do
+
+        docker-machine kill
+        docker-machine rm
+
+Configuration is stored in the directory ```cd /Users/<user_name>/.docker/machine/machines/```
+
+These commands were taken from the [docker documentation](https://docs.docker.com/machine/examples/aws/)
