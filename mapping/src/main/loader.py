@@ -1,20 +1,25 @@
-from kafka import KafkaConsumer
+import json
 
-from settings import kafka_params
-from settings import result_mapping
+from kafka import KafkaConsumer, KafkaProducer
+
+from settings import kafka_params, summary_feeds
 from src.main.manager import CacheManager
+from src.main.parser import ResultParser
 
 
 class ResultLoader():
 
-    markets = ["{market}-results".format(market=market) for market in result_mapping.keys()]
+    markets = ["{feed}-results".format(feed=name) for name in summary_feeds.keys()]
     cacheManager = CacheManager()
     kafkaConsumer = KafkaConsumer(**kafka_params)
+    producer = KafkaProducer(**kafka_params, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     def consumeResults(self):
         self.kafkaConsumer.subscribe(self.markets)
         for message in self.kafkaConsumer:
-            print(message)
-
-if __name__ == '__main__':
-    rl = ResultLoader()
+            feed = message.topic.split("-")[0]
+            value = ResultParser(feedName=feed, source=message.value).parseResult()
+            item = {"url": value["url"], "type": feed}
+            self.producer.send(topic="worker-queue", value=item)
+            self.cacheManager.insertResult(name="{}-results".format(feed), result=value, key=message.key)
+            print(json.dumps(value, indent=4))

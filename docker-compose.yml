@@ -4,24 +4,12 @@ services:
   #TODO formalise the environment variable files for docker and local
   # local.env and docker.env should be committed
 
-  mongo:
-    image: mongo
-    container_name: mongo
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
-    command: mongod
-
   feed:
     container_name: feed
     build: "./feed"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - mongo
       - kafka
       - router
       - nanny
@@ -31,12 +19,20 @@ services:
     env_file:
       - feed/docker.env
 
+  worker:
+    container_name: worker
+    build: ./worker
+    depends_on:
+    - kafka
+    - nanny
+    stop_grace_period: 5s
+    env_file:
+    - worker/docker.env
 
   router:
     container_name: router
     build: "./routing"
     depends_on:
-    - mongo
     - hazelcast
     ports:
     - "5002:5000"
@@ -55,7 +51,7 @@ services:
 
   mapper:
     container_name: mapper
-    build: "./mapping"
+    build: ./mapping
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     depends_on:

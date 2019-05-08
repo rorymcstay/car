@@ -1,32 +1,31 @@
-import logging as log
-import threading
+import json
+import logging
+import os
+import socket
 import traceback
-from time import time
+from http.client import RemoteDisconnected
+from time import time, sleep
 
 import bs4
-from docker.errors import APIError
-from kafka import KafkaProducer
+import requests
+import selenium.webdriver as webdriver
+from kafka import KafkaProducer, KafkaConsumer
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-from settings import market, mongo_params
-from src.main.market.browser.Browser import Browser
-from src.main.market.crawling.WebCrawler import WebCrawler
-from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
-from src.main.market.utils.HealthStatus import HealthStatus
-from src.main.service.mongo_service.MongoService import MongoService
-from src.main.utils.LogGenerator import LogGenerator, write_log
+from selenium.webdriver.support.ui import WebDriverWait
+from urllib3.exceptions import ProtocolError
 
-LOG = LogGenerator(log, name='worker')
+from settings import stream_params, kafka_params, nanny_params, browser_params
 
 
 class Worker:
-    mongoService: MongoService
-    producer: KafkaProducer
-    error = True
-    stop = True
-    thread = None
+
+    producer = KafkaProducer(**kafka_params)
+    consumer: KafkaConsumer = KafkaConsumer(**kafka_params, value_deserializer=lambda m: json.loads(m.decode('ascii')))
+    port = None
 
     def __init__(self):
         """
@@ -37,106 +36,85 @@ class Worker:
         :param remote:
         """
 
-        self.mongoService = MongoService('{host}:{port}'.format(**mongo_params))
-        self.port = getOpenPort()
-        self.batch_number = self.port
-        self.market = market
-        self.browser = Browser(port=self.port)
-        self.webCrawler = WebCrawler(self.port)
-        self.producer = KafkaProducer()
+        port = getOpenPort()
+        port = requests.get("http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params,
+                                                                                                      submission_port=port)).text
+        self.driver = self.startWebdriverSession(port)
 
-    def prepareBatch(self, results, out):
-        """
-        prepare worker threads and distribute results amongst workers
 
-        :param results:
-        :param out:
-        :return:
-        """
-        start = time()
-        self.thread = threading.Thread(target=self.publishObjects, args=(results, out),
-                                       name='Thread {}'.format(str(self.batch_number)))
-        write_log(LOG.info, msg="batch_prepared", thread=self.batch_number, time=start, size=len(results))
+    def startWebdriverSession(self, port, attempts=0):
+        options = Options()
+        options.add_argument("--headless")
+        max_attempts = 10
+        try:
+            url = "http://{host}:{port}/wd/hub".format(port=port, host=browser_params["host"])
+            attempts += 1
+            driver = webdriver.Remote(command_executor=url,
+                                      desired_capabilities=DesiredCapabilities.CHROME,
+                                      options=options)
+            self.port = port
+            return driver
+        except (WebDriverException, ProtocolError, RemoteDisconnected) as e:
+            logging.warning(
+                "failed to communicate with selenium because of {}, trying again for {} more times".format(type(e),
+                                                                                                           max_attempts - attempts))
+            if attempts < max_attempts:
+                attempts += 1
+                sleep(3)
+                return self.startWebdriverSession(port, attempts)
+            else:
+                requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(port, **nanny_params))
+                port = requests.get(
+                    "http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params,
+                                                                                              submission_port=port)).text
+                return self.startWebdriverSession(port)
 
-    #   TODO the worker should write to Mongo in batches
-
-    def publishObjects(self, results: list):
+    def publishObject(self, url, streamName):
         """
         Updates a list provided called out. Intended to be used in a different thread in conjunction with multiple
         workers
 
         :param results: the batch or urls
         """
-
+        stream = stream_params[streamName]
         try:
-            for url in results:
-                webTime = time()
-                self.webCrawler.driver.get(url)
-                write_log(LOG.debug, msg="page_loaded", time_elapsed=time() - webTime)
-                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, market['wait_for_car']))
-                WebDriverWait(self.webCrawler.driver, BrowserConstants().worker_timeout).until(element_present)
-                if market.get("worker_stream") is not None:
-                    parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source)
-                    if market.get("worker_stream").get("single"):
-                        self.producer.send(topic="{name}_{type}".format(**market, type="items"),
-                                           value=bytes(str(parser.find(market.get("worker_stream").get("class"))), 'utf-8'),
-                                           key=bytes(self.webCrawler.driver.current_url, 'utf-8'))
-                    else:
-                        items = parser.findAll(market.get("worker_stream").get("class"))
-                        i = 0
-                        for item in items:
-                            i += 1
-                            self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="items"),
-                                               value=bytes(item, 'utf-8'),
-                                               key=bytes("{}_{}".format(self.webCrawler.driver.current_url, i), 'utf-8'))
-                else:
-                    self.producer.send(topic="{name}_{type}".format(name=self.market.name, type="items"),
-                                       value=bytes(self.webCrawler.driver.page_source, "utf-8"),
-                                       key=bytes(self.webCrawler.driver.current_url))
+            webTime = time()
+            self.driver.get(url)
+            logging.debug(msg="page loaded in: {time_elapsed} s".format(time_elapsed=time() - webTime))
+            element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
+            WebDriverWait(self.driver, os.getenv("WORKER_TIMEOUT")).until(element_present)
+            parser = bs4.BeautifulSoup(self.driver.page_source)
+            if stream.get("worker_stream").get("single"):
+                self.producer.send(topic="{name}-items".format(name=streamName),
+                                   value=bytes(str(parser.find(stream.get("worker_stream").get("class"))),
+                                               'utf-8'),
+                                   key=bytes(self.driver.current_url, 'utf-8'))
+            else:
+                items = parser.findAll(stream.get("worker_stream").get("class"))
+                i = 0
+                for item in items:
+                    i += 1
+                    self.producer.send(topic="{name}-items".format(name=streamName,
+                                       value=bytes(item, 'utf-8'),
+                                       key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8')))
 
         except WebDriverException:
-            write_log(LOG.error, msg="webdriver_exception", thread=self.batch_number)
+            logging.error("webdriver exception")
             traceback.print_exc()
-            self.webCrawler = WebCrawler(self.port)
-            write_log(LOG.info, thread=self.batch_number, msg="restarted_webCrawler")
-        except APIError as e:
-            write_log(LOG.error, msg="docker_api_error", thread=self.batch_number)
-            traceback.print_exc()
-            self.cleanUp()
-            traceback.print_exc()
-            self.browser = Browser(self.port)
-            self.webCrawler = WebCrawler(self.port)
+            requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))
+            self.__init__()
 
-    def healthCheck(self, exception: Exception = Exception('None')) -> HealthStatus:
-        """
-        Conduct a health check of resources
+    def main(self):
+        self.consumer.subscribe([name for name in stream_params.keys()])
+        while 1:
+            for item in self.consumer:
+                self.publishObject(url=item.value["url"], streamName=item.topic.split("-")[0])
 
-        :param exception:
-        :return:
-        """
-        try:
-            write_log(LOG.info, thread=self.batch_number, msg="doing_health_check")
-            health = HealthStatus(exception,
-                                  browser=self.browser.health_indicator(),
-                                  webCrawler=self.webCrawler.healthIndicator())
-            write_log(log=LOG.debug, msg='health_check', **health)
-            self.health = health
-            return health
-        except Exception as e:
-            write_log(LOG.error, thread=self.batch_number,
-                      msg="error taking health check for because {}".format(e.args[0]))
 
-    def cleanUp(self):
-        """
-        kill resources
-
-        :return:
-        """
-        self.browser.quit()
-        write_log(LOG.info, thread=self.batch_number, msg="cleaning up")
-
-    def regenerate(self):
-        self.port = getOpenPort()
-        self.browser = Browser(self.port)
-        self.webCrawler = WebCrawler(self.port)
-        write_log(LOG.info, thread=self.batch_number, msg="restarted resources")
+def getOpenPort():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("", 0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
