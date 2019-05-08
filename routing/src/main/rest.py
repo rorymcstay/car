@@ -15,7 +15,7 @@ class RoutingController(FlaskView):
         """
         return self.routingManager.getBaseUrl(name, make, model, sort)
 
-    @route("updateHistory/<string:name>")
+    @route("updateHistory/<string:name>", methods=["PUT"])
     def updateHistory(self, name):
         """
         Add a history item to the cache of the caller
@@ -23,15 +23,3 @@ class RoutingController(FlaskView):
         :return:
         """
         self.routingManager.updateHistory(name, request.data)
-
-    @route("assignNewPort/<int:port>", methods=["PUT"])
-    def assignNewPort(self, name):
-        """
-        return a json payload of dataframe.
-        :return:
-        """
-        return self.routingManager.assignPort(name)
-
-    @route("freeContainer/<int:port>", methods=["PUT"])
-    def freeContainer(self, port):
-        return self.freeContainer(port)

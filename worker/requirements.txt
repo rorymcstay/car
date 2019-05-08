@@ -1,1 +1,15 @@
+python-dotenv
+pyfiglet
+requests
+flask
+flask-classy
+bson
+selenium
+pymongo
+slimit
+beautifulsoup4
+pyyaml
+docker
+influxdb
 hazelcast-python-client
+kafka-python

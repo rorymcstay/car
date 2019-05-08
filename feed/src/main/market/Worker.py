@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 
 from settings import market_params, mongo_params, nanny_params
-from src.main.market.crawling.WebCrawler import WebCrawler
+from src.main.market.crawling.crawling import WebCrawler
 from src.main.market.utils.BrowserConstants import BrowserConstants, getOpenPort
 from src.main.market.utils.HealthStatus import HealthStatus
 from src.main.service.mongo_service.MongoService import MongoService

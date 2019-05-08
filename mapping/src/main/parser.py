@@ -7,26 +7,22 @@ from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 
-from settings import markets, result_mapping
+from settings import feeds, summary_feeds
 from src.main.exceptions import ResultCollectionFailure
+from src.main.tools import find
 
 
 class ResultParser:
 
-    def __init__(self, market, source):
-        self.params = markets[market]
-        self.items = result_mapping[market]
+    def __init__(self, feedName, source):
+        self.params = summary_feeds[feedName]
         self.soup = bs4.BeautifulSoup(source, "html.parser")
-        self.results = self.soup.findAll(attrs=self.params['result'])
 
-    def parseResults(self):
-        all = []
-        for result in self.results:
-            items = {}
-            for item in self.items:
-                items.update(self.getItem(item, result))
-            all.append(items)
-        return all
+    def parseResult(self):
+        items = {}
+        for item in self.params:
+            items.update(self.getItem(item, self.soup))
+        return items
 
     def getItem(self, item: str, start: Tag) -> dict:
         """
@@ -35,7 +31,7 @@ class ResultParser:
         :param start: the node to start from
         :return:
         """
-        path = self.items[item]
+        path = self.params[item]
 
         if path['attr'] and path['single']:
             for step in path['class']:
@@ -69,12 +65,9 @@ class ResultParser:
 
 
 class ObjectParser:
-
-    def __init__(self, market, source):
-        self.params = markets[market]
-        self.items = result_mapping[market]
+    def __init__(self, feedName, source):
+        self.params = feeds[feedName]
         self.soup = bs4.BeautifulSoup(source, "html.parser")
-        self.results = self.soup.findAll(attrs=self.params['result'])
 
     def getItem(self, url):
         """
@@ -99,12 +92,16 @@ class ObjectParser:
                     out.append(raw_car)
             if len(out) == 0:
                 raise ResultCollectionFailure(reason="Nothing found here", url=url, exception=None)
+            else:
+                item = {}
+                for name in self.params["attrs"]:
+                    for val in out:
+                        item.update(find(self.params["attrs"][name], val))
+                return item
         except Exception as e:
             traceback.print_exc()
             error = ResultCollectionFailure(url=url, reason=traceback.format_exc(),exception=e)
             raise error
-        return out
-
 
 
 if __name__ == '__main__':

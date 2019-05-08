@@ -18,7 +18,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
 from settings import routing_params, market_params, browser_params, nanny_params
-from src.main.market.crawling.Exceptions import MaxAttemptsReached
+from src.main.market.crawling.exceptions import MaxAttemptsReached
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 from src.main.utils.LogGenerator import LogGenerator, write_log
 
@@ -45,6 +45,7 @@ class WebCrawler:
         self.history = []
 
     def startWebdriverSession(self, url, options, attempts=0):
+
         max_attempts=10
         try:
             attempts += 1

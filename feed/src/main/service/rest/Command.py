@@ -1,4 +1,3 @@
-import json
 from time import time
 
 from flask_classy import FlaskView, route
@@ -15,36 +14,6 @@ class Command(FlaskView):
     database and creates Market objects.
 
     """
-
-    @route('/addWorker', methods=['PUT'])
-    def addWorker(self):
-        """
-        create a new Market Object and save to database
-
-        :param name:
-        :return:
-        """
-        newWorker = market.addWorker()
-        return json.dumps(newWorker)
-
-    @route('/removeWorker', methods=['DELETE'])
-    def removeWorker(self):
-        market.removeWorker()
-        return 'ok'
-
-    @route('/makeWorkers/<int:max_containers>', methods=['GET'])
-    def makeWorkers(self, number):
-        """
-        create workers for a market. Client specifies the number of containers to use
-
-        :param name: market name
-        :param max_containers: max containers
-        :return: ok
-        """
-        market.makeWorkers(number)
-        returnString = [{w.batch_number: w.healthCheck()} for w in market.workers]
-
-        return json.dumps(returnString)
 
 
     @route('/specifyMakeModel/<string:make>/<string:model>', methods=['GET'])
@@ -75,17 +44,6 @@ class Command(FlaskView):
         :return:
         """
         market.setHome(sort)
-        return 'ok'
-
-
-    @route('/cleanUpResources', methods=['GET'])
-    def cleanUpResources(self):
-        """
-        Destroy Workers' resources
-        :param name:
-        :return:
-        """
-        market.tearDownWorkers()
         return 'ok'
 
     @route('/goHome/<string:name>', methods=['GET'])

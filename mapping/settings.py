@@ -6,7 +6,13 @@ from dotenv import load_dotenv
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
-markets = {
+feeds = {
+    "feed_name":{
+        "json_identifier": "window.adDetails",
+        "attrs":{
+            "price": "etc",
+        }
+    },
     "donedeal": {
         "result": "card-item",
         "json_identifier": "window.adDetails",
@@ -33,7 +39,7 @@ markets = {
     }
 }
 
-result_mapping = {
+summary_feeds = {
     "donedeal": {
         "url": {
             "class": ['card__link'],  # the unique path in terms of classes to the tag containg the info

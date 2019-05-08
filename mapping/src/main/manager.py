@@ -1,13 +1,13 @@
+import json
 import logging
 
 import hazelcast
 from hazelcast import ClientConfig, HazelcastClient
+from hazelcast.core import HazelcastJsonValue
 
 from settings import hazelcast_params
 
 config = hazelcast.ClientConfig()
-config.group_config.name = 'car-cluster'
-config.group_config.password = 'password'
 
 config.network_config.addresses.append('127.0.0.1')
 config.network_config.addresses.append('192.168.1.99')
@@ -19,12 +19,24 @@ class CacheManager:
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     client = HazelcastClient(config)
 
-    def insertResult(self, name, result):
+    def insertResult(self, name, result, key):
         """
         request the next set of results
 
         :return:
         """
 
-        self.client.get_map(name).put(key=result['_id'], value=result)
-        logging.debug('inserted car result {}'.format(result['_id']))
+        map = self.client.get_map(name)
+        map.put(key=key, value=HazelcastJsonValue(json.dumps(result)))
+
+        logging.debug('inserted car result {}'.format(key))
+
+    def insertResults(self, name, values):
+        """
+
+        :type values: dict
+        """
+        [values.update({key: HazelcastJsonValue(values[key])}) for key in values]
+        map = self.client.get_map(name)
+        map.put_all(map)
+        logging.debug("inserted {} items to the cache".format(len(values)))
