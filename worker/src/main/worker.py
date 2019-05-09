@@ -100,7 +100,6 @@ class Worker:
             webTime = time()
             self.driver.get(url)
             logging.debug(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,time_elapsed=time() - webTime))
-            print(self.driver.page_source)
             element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
             WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
             parser = bs4.BeautifulSoup(self.driver.page_source)

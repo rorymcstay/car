@@ -23,5 +23,3 @@ class ResultLoader():
             self.producer.send(topic="worker-queue", value=item)
             self.cacheManager.insertResult(name="{}-results".format(feed), result=value, key=message.key)
             print(json.dumps(value, indent=4))
-
-
