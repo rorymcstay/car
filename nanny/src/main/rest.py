@@ -20,17 +20,25 @@ class ContainerController(FlaskView):
 
 class ParameterController(FlaskView):
     parameterManager = ParameterManager()
-    parameterManager.loadParams()
+
 
     @route("/getParameter/<string:name>/<string:feed>")
     def getParameter(self, name, feed):
-        params = self.parameterManager.getParameter(name, feed)
+        params = self.parameterManager.getParameter(name=name, feed=feed)
+        return Response(json.dumps(params), mimetype="application/json")
+
+    @route("/getParameter/<string:feed>")
+    def getParameters(self, feed):
+        params = self.parameterManager.getParameter(feed)
         return Response(json.dumps(params), mimetype="application/json")
 
     @route("/setParameter/<string:name>/<string:feed>", methods=["PUT"])
     def setParameter(self, name, feed):
         value=request.get_json()
-        self.parameterManager.setParameter(name, feed, value)
+        self.parameterManager.setParameter(name=name, feed=feed, value=value)
         return "ok"
+#
+# if __name__ == '__main__':
+#     ParameterController().parameterManager.loadParams()
 
 

@@ -1,35 +1,11 @@
 import os
 
 feeds = {
-    "feed_name":{
+    "donedeal":{
         "json_identifier": "window.adDetails",
         "attrs":{
             "price": "etc",
         }
-    },
-    "donedeal": {
-        "result": "card-item",
-        "json_identifier": "window.adDetails",
-        "result_css": ".card__body",
-        "wait_for_car": ".cad-header",
-        'next_page_xpath': "//*[@id]",
-        "next_button_text": "next",
-        "result_stub": "https://www.donedeal.co.uk/cars-for-sale/",
-        "sortString": "publishdate%20desc",
-        "result_exclude": ['compare', 'insurance'],
-        "home": "https://donedeal.co.uk/cars",
-    },
-    "piston_heads": {
-        "result": "result-contain",
-        "json_identifier": "pageDnaObj",
-        "result_css": ".result-contain",
-        "wait_for_car": ".theImage",
-        'next_page_xpath': "//*[@id=\"next\"]",
-        "next_button_text": "next",
-        "result_stub": "https://www.pistonheads.com/classifieds/used-cars/",
-        "sortString": "NewestWithImageFirst", # the sort by newest url string for router
-        "result_exclude": ["we will buy", 'compare', 'insurance'], # ignore commonly named adverts
-        "home": "https://www.pistonheads.com/classifieds?Category=",
     }
 }
 

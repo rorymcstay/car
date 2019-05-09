@@ -11,6 +11,7 @@ import bs4
 import requests
 import selenium.webdriver as webdriver
 from kafka import KafkaProducer, KafkaConsumer
+from kafka.consumer.fetcher import ConsumerRecord
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -94,27 +95,34 @@ class Worker:
 
         :param results: the batch or urls
         """
-        stream = stream_params["{}-items".format(streamName)]
+        stream = stream_params["{}".format(streamName)]
         try:
             webTime = time()
             self.driver.get(url)
-            logging.debug(msg="page loaded in: {time_elapsed} s".format(time_elapsed=time() - webTime))
+            logging.debug(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,time_elapsed=time() - webTime))
+            print(self.driver.page_source)
             element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
-            WebDriverWait(self.driver, os.getenv("WORKER_TIMEOUT")).until(element_present)
+            WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
             parser = bs4.BeautifulSoup(self.driver.page_source)
-            if stream.get("worker_stream").get("single"):
+            if stream.get("single"):
+                if stream.get("class") is None:
+                    message = bytes(self.driver.page_source)
+                else:
+                    message = bytes(str(parser.find(attrs={"class": stream.get("class")})),
+                          'utf-8')
                 self.producer.send(topic="{name}-items".format(name=streamName),
-                                   value=bytes(str(parser.find(stream.get("worker_stream").get("class"))),
-                                               'utf-8'),
+                                   value=message,
                                    key=bytes(self.driver.current_url, 'utf-8'))
+                logging.info("published {}".format(self.driver.current_url))
             else:
-                items = parser.findAll(stream.get("worker_stream").get("class"))
+                items = parser.findAll(attrs={"class": stream.get("class")})
                 i = 0
                 for item in items:
                     i += 1
                     self.producer.send(topic="{name}-items".format(name=streamName,
-                                       value=bytes(item, 'utf-8'),
+                                       value=bytes(str(item), 'utf-8'),
                                        key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8')))
+                logging.info("published {}".format(self.driver.current_url))
 
         except WebDriverException:
             logging.error("webdriver exception")
@@ -127,7 +135,9 @@ class Worker:
         self.consumer.subscribe(["worker-queue"])
 
         while 1:
+            item: ConsumerRecord
             for item in self.consumer:
-                self.publishObject(url=item.value["url"], streamName=item.topic.split("-")[0])
+                print(item)
+                self.publishObject(url=item.value["url"], streamName=item.value["type"])
             if killer.kill_now:
                 requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))

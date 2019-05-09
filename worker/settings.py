@@ -1,23 +1,20 @@
 import os
 
+import requests
 
-stream_params = {
-    "donedeal":{
-        "class": "result-contain",
-        "single": False,
-        "page_ready": ""
-    }
+nanny_params = {
+    "host": os.getenv("NANNY_HOST", "localhost"),
+    "port": os.getenv("FLASK_PORT"),
+    "api_prefix": "containercontroller",
+    "params_manager": "parametercontroller"
 }
+
+stream_params = requests.get("http://{host}:{port}/{params_manager}/getParameter/stream_params".format(**nanny_params)).json()
 
 browser_params = {
     "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal")
 }
 
-nanny_params = {
-    "host": os.getenv("NANNY_HOST", "localhost"),
-    "port": os.getenv("FLASK_PORT", 5000),
-    "api_prefix": "containercontroller"
-}
 
 kafka_params = {
     "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],

@@ -19,6 +19,14 @@ feeds = {
 }
 }
 
+stream_params = {
+    "donedeal":{
+        "class": "result-contain",
+        "single": False,
+        "page_ready": "img"
+    }
+}
+
 class ParameterManager:
     """
     The ParameterManager controls the parameters. It delivers them to the client upon start up for use in
@@ -28,20 +36,23 @@ class ParameterManager:
     client = pymongo.MongoClient(**mongo_params)
     feed_params = client[os.getenv("PARAMETER_DATABASE", "params")]
 
-    def getParameter(self, name, type):
-        feed = self.feed_params[type].find_one(filter={"name": name})
-        params = feed["value"]
-        return params
+    def getParameter(self, feed, name=None):
+        if name is not None:
+            feed = self.feed_params[feed].find_one(filter={"name": name})
+        else:
+            feed = self.feed_params[feed].find_one(filter={"name": "stream_params"})
+        return feed["value"]
 
-    def setParameter(self, name, type, value):
-        param = self.feed_params[type].find_one({"name": name})
+    def setParameter(self, feed, value, name=None):
+        param = self.feed_params[feed].find_one({"name": name})
         if param is not None:
             param["value"] = value
-            self.feed_params[type].replace_one(filter={"name": name}, replacement={"name":name, "value": value})
+            self.feed_params[feed].replace_one(filter={"name": name}, replacement={"name": name, "value": value})
         else:
             param = {"name": name, "value": value}
-            self.feed_params[type].insert_one(param)
+            self.feed_params[feed].insert_one(param)
 
     def loadParams(self):
         for feed in feeds:
             self.setParameter(feed, "feed", feeds[feed])
+        self.setParameter(name="stream_params", value=stream_params, feed="stream_params")
