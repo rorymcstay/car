@@ -25,6 +25,7 @@ from settings import stream_params, kafka_params, nanny_params, browser_params
 
 class GracefulKiller:
     kill_now = False
+
     def __init__(self):
         signal.signal(signal.SIGINT, self.exit_gracefully)
         signal.signal(signal.SIGTERM, self.exit_gracefully)
@@ -41,8 +42,8 @@ def getOpenPort():
     s.close()
     return port
 
-class Worker:
 
+class Worker:
     producer = KafkaProducer(**kafka_params)
     consumer: KafkaConsumer = KafkaConsumer(**kafka_params, value_deserializer=lambda m: json.loads(m.decode('utf-8')))
     port = None
@@ -56,10 +57,8 @@ class Worker:
         :param remote:
         """
 
-        port = getOpenPort()
-        port = requests.get("http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params, submission_port=port)).text
+        port = requests.get("http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params)).text
         self.driver = self.startWebdriverSession(port)
-
 
     def startWebdriverSession(self, port, attempts=0):
         options = Options()
@@ -67,7 +66,6 @@ class Worker:
         max_attempts = 10
         try:
             url = "http://{host}:{port}/wd/hub".format(port=port, host=browser_params["host"])
-            attempts += 1
             driver = webdriver.Remote(command_executor=url,
                                       desired_capabilities=DesiredCapabilities.CHROME,
                                       options=options)
@@ -75,17 +73,16 @@ class Worker:
             return driver
         except (WebDriverException, ProtocolError, RemoteDisconnected) as e:
             logging.warning(
-                "failed to communicate with selenium because of {}, trying again for {} more times".format(type(e),
+                "failed to communicate with selenium at {} because of {}, trying again for {} more times".format(url, type(e),
                                                                                                            max_attempts - attempts))
             if attempts < max_attempts:
                 attempts += 1
                 sleep(3)
                 return self.startWebdriverSession(port, attempts)
             else:
-                requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(port, **nanny_params))
+                requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{request_port}".format(request_port=port, **nanny_params))
                 port = requests.get(
-                    "http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params,
-                                                                                              submission_port=port)).text
+                    "http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params, submission_port=port)).text
                 return self.startWebdriverSession(port, attempts)
 
     def publishObject(self, url, streamName):
@@ -99,16 +96,16 @@ class Worker:
         try:
             webTime = time()
             self.driver.get(url)
-            logging.info(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,time_elapsed=time() - webTime))
+            logging.info(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,
+                                                                        time_elapsed=time() - webTime))
             element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
             WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
-            parser = bs4.BeautifulSoup(self.driver.page_source)
+            parser = bs4.BeautifulSoup(self.driver.page_source, features="html.parser")
             if stream.get("single"):
                 if stream.get("class") is None:
-                    message = bytes(self.driver.page_source)
+                    message = bytes(self.driver.page_source, "utf-8")
                 else:
-                    message = bytes(str(parser.find(attrs={"class": stream.get("class")})),
-                          'utf-8')
+                    message = bytes(str(parser.find(attrs={"class": stream.get("class")})), 'utf-8')
                 self.producer.send(topic="{name}-items".format(name=streamName),
                                    value=message,
                                    key=bytes(self.driver.current_url, 'utf-8'))
@@ -118,25 +115,26 @@ class Worker:
                 i = 0
                 for item in items:
                     i += 1
-                    self.producer.send(topic="{name}-items".format(name=streamName,
-                                       value=bytes(str(item), 'utf-8'),
-                                       key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8')))
+                    payload = dict(value=bytes(str(item), 'utf-8'),
+                                   key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8'))
+                    self.producer.send(topic="{name}-items".format(name=streamName), **payload)
                 logging.info("published {}".format(self.driver.current_url))
 
         except WebDriverException:
             logging.error("webdriver exception")
             traceback.print_exc()
-            requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))
+            requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{req_port}".format(req_port = self.port, **nanny_params))
             self.__init__()
 
     def main(self):
         killer = GracefulKiller()
         self.consumer.subscribe(["worker-queue"])
-
         while 1:
             item: ConsumerRecord
             for item in self.consumer:
                 print(item)
                 self.publishObject(url=item.value["url"], streamName=item.value["type"])
-            if killer.kill_now:
-                requests.get("{host}:{port}/{api_prefix}/freeContainer/{port}".format(self.port, **nanny_params))
+                if killer.kill_now:
+                    requests.get(
+                        "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
+                    self.consumer.close()

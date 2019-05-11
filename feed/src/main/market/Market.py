@@ -35,6 +35,13 @@ class Market:
     def __init__(self):
         self.webCrawler = WebCrawler()
 
+    def renewWebCrawler(self):
+        self.webCrawler.quit()
+        self.webCrawler = WebCrawler()
+        last = r.get("http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params)).text
+        logging.info("navigating to latest page {}".format(last))
+        self.webCrawler.driver.get(last)
+
     def goHome(self):
         """
         navigate back to the base url

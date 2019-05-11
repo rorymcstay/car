@@ -9,7 +9,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logging.FileHandler('/var/tmp/myapp.log')
 
 
-
 app = Flask(__name__)
 ContainerController.register(app)
 ParameterController.register(app)

@@ -19,24 +19,14 @@ class CacheManager:
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     client = HazelcastClient(config)
 
-    def insertResult(self, name, result, key):
+    def insertResult(self, mapName, result, key):
         """
         request the next set of results
 
         :return:
         """
 
-        map = self.client.get_map(name)
+        map = self.client.get_map(mapName)
         map.put(key=key, value=HazelcastJsonValue(json.dumps(result)))
 
         logging.debug('inserted car result {}'.format(key))
-
-    def insertResults(self, name, values):
-        """
-
-        :type values: dict
-        """
-        [values.update({key: HazelcastJsonValue(values[key])}) for key in values]
-        map = self.client.get_map(name)
-        map.put_all(map)
-        logging.debug("inserted {} items to the cache".format(len(values)))

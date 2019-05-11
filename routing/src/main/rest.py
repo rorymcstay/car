@@ -23,3 +23,13 @@ class RoutingController(FlaskView):
         :return:
         """
         return self.routingManager.updateHistory(name, request.data)
+
+    @route("getLastPage/<string:name>", methods=["GET"])
+    def getLastPage(self, name):
+        """
+        get the last page of the caller
+
+        :param name:
+        :return:
+        """
+        return self.routingManager.getLastPage(name)

@@ -1,6 +1,4 @@
 hazelcast-python-client
 flask
 flask-classy
-bson
 requests
-python-dotenv

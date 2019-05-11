@@ -44,40 +44,55 @@ class Container(Portable):
         return type(self) == type(other) and self.port == other.name and self.active == other.active
 
 
-
 class ContainerManager:
+    ports = [{"port": 4444 + i, "active": 'no'} for i in range(browser_params["max"])]
     client = docker.client.from_env()
     config = ClientConfig()
-
     config.serialization_config.portable_factories[Container.FACTORY_ID] = \
         {Container.CLASS_ID: Container}
-
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     hz = HazelcastClient(config)
 
-    def getContainer(self, port):
+    for port in ports:
+        try:
+            client.containers.run(client.images.get(browser_params['image']),
+                                  detach=True,
+                                  name='worker-{}'.format(port["port"]),
+                                  ports={'4444/tcp': port["port"]},
+                                  remove=True)
+            hz.get_map("browser_containers").put(key=port["port"], value=Container(port=port["port"], active="no"))
 
-        # TODO handle: selenium.common.exceptions.WebDriverException: Message: unknown error: session deleted because of page crash
+        except APIError as e:
+            if e.status_code == 409:
+                client.containers.get('worker-{}'.format(port["port"]))
 
-        portAssigned = self.assignPort(port)
+    def resetCache(self):
+        map = self.hz.get_map("browser_containers")
+        map.evict_all()
+        for port in self.ports:
+            map.put(key=port["port"], value=Container(port=port["port"], active='no'))
+        return 'ok'
+
+    def getContainer(self):
+
+        portAssigned = self.assignPort()
 
         if portAssigned:
             port = portAssigned
-            browser = self.client.containers.get('worker-{port}'.format(port=port))
-            browser.reload()
-            return str(port)
-        try:
-            browser = self.client.containers.run(self.client.images.get(browser_params['image']),
-                                                 detach=True,
-                                                 name='worker-{}'.format(port),
-                                                 ports={'4444/tcp': port},
-                                                 remove=True)
-        except APIError as e:
-            if e.status_code == 409:
+            try:
                 browser = self.client.containers.get('worker-{port}'.format(port=port))
-                browser.reload()
-            else:
-                raise e
+            except APIError as e:
+                if e.status_code == 404:
+                    browser = self.client.containers.run(self.client.images.get(browser_params['image']),
+                                                         detach=True,
+                                                         name='worker-{}'.format(port),
+                                                         ports={'4444/tcp': port},
+                                                         remove=True)
+                else:
+                    raise e
+        else:
+            return "max containers reached"
+
         logging.info(msg='starting_browser named worker-{port}'.format(port=port))
         self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
         return str(port)
@@ -91,12 +106,21 @@ class ContainerManager:
         # TODO handle restarting container here - test that you can use a container after running for some time
         return "ok"
 
-    def assignPort(self, port):
+    def cleanUpContainers(self):
         workerPorts = self.hz.get_map("browser_containers")
-        item = Container(port)
+        inactive = workerPorts.values(sql("active = 'no'")).result()
+        for container in inactive:
+            res = self.client.containers.prune(filters={
+                "name": "worke-{}".format(container.port)
+            })
+            logging.info("killed container {}".format(res))
+            workerPorts.delete(key=container.port)
+        return "ok"
+
+    def assignPort(self):
+        workerPorts = self.hz.get_map("browser_containers")
         unused = workerPorts.values(sql("active = 'no'")).result()
         if len(unused) == 0 or workerPorts.size().result() == 0:
-            workerPorts.put(key=port, value=item)
             return False
         else:
             workerPorts.replace(key=unused[0].port, value=Container(port=unused[0].port, active="yes"))

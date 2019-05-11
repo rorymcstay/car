@@ -17,13 +17,11 @@ browser_params = {
 
 }
 
-
 routing_params = {
     "host": os.getenv("ROUTER_HOST", "localhost"),
     "port": os.getenv("FLASK_PORT"),
     "api_prefix": "routingcontroller"
 }
-
 
 nanny_params = {
     "host": os.getenv("NANNY_HOST", "localhost"),
@@ -33,6 +31,6 @@ nanny_params = {
 }
 
 
-params = requests.get("http://{host}:{port}/{params_manager}/getParameter/{name}/feed".format(**nanny_params, name=os.getenv("NAME")))
+params = requests.get("http://{host}:{port}/{params_manager}/getParameter/{name}/results".format(**nanny_params, name=os.getenv("NAME")))
 
 feed_params = params.json()

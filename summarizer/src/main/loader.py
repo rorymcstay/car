@@ -23,5 +23,4 @@ class ResultLoader():
             item = {"url": value["url"], "type": feed}
             self.producer.send(topic="worker-queue", value=item)
             self.cacheManager.insertResult(name="{}-results".format(feed), result=value, key=message.key)
-            print(json.dumps(value, indent=4))
             sleep(10)

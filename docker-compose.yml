@@ -18,7 +18,6 @@ services:
       - feed_platform/docker.env
 
   worker:
-    container_name: worker
     build: ./worker
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -28,6 +27,7 @@ services:
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env
+
 
   router:
     container_name: router
@@ -53,9 +53,9 @@ services:
     env_file:
       - feed_platform/docker.env
 
-  mapper:
-    container_name: mapper
-    build: ./mapping
+  summarizer:
+    container_name: summarizer
+    build: ./summarizer
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -63,6 +63,20 @@ services:
     - kafka
     ports:
     - "5004:5000"
+    stop_grace_period: 5s
+    env_file:
+    - feed_platform/docker.env
+
+  mapper:
+    container_name: mapper
+    build: ./mapper
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - hazelcast
+    - kafka
+    ports:
+    - "5005:5000"
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env

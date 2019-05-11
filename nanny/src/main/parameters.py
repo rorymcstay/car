@@ -2,30 +2,8 @@ import os
 
 import pymongo
 
-from settings import mongo_params
+from settings import mongo_params, feeds, stream_params, summary_feeds, objects, home_config
 
-feeds = {
-    "donedeal": {
-    "name": "donedeal",
-    'next_page_xpath': "//*[@id]",
-    "next_button_text": "next",
-    "result_stub": "https://www.donedeal.co.uk/cars-for-sale/",
-    "wait_for": ".cad-header",
-    "base_url": "https://donedeal.co.uk/cars",
-    "result_stream": {
-        "class": "card-item",
-        "single": False
-    },
-}
-}
-
-stream_params = {
-    "donedeal":{
-        "class": "result-contain",
-        "single": False,
-        "page_ready": "img"
-    }
-}
 
 class ParameterManager:
     """
@@ -36,23 +14,31 @@ class ParameterManager:
     client = pymongo.MongoClient(**mongo_params)
     feed_params = client[os.getenv("PARAMETER_DATABASE", "params")]
 
-    def getParameter(self, feed, name=None):
+    def getParameter(self, feed_type, name=None):
         if name is not None:
-            feed = self.feed_params[feed].find_one(filter={"name": name})
+            feed_type = self.feed_params[feed_type].find_one(filter={"name": name})
         else:
-            feed = self.feed_params[feed].find_one(filter={"name": "stream_params"})
-        return feed["value"]
+            feed_type = self.feed_params[feed_type].find_one(filter={"name": "stream_params"})
+        return feed_type["value"]
 
-    def setParameter(self, feed, value, name=None):
-        param = self.feed_params[feed].find_one({"name": name})
-        if param is not None:
-            param["value"] = value
-            self.feed_params[feed].replace_one(filter={"name": name}, replacement={"name": name, "value": value})
+    def setParameter(self, feed_type, value, name=None):
+        if name is not None:
+            param = self.feed_params[feed_type].find_one({"name": value["name"]})
+            if param is not None:
+                param["value"] = value
+                self.feed_params[feed_type].replace_one(filter={"name": name}, replacement={"name": name, "value": value})
+            else:
+                param = {"name": name, "value": value}
+                self.feed_params[feed_type].insert_one(param)
         else:
-            param = {"name": name, "value": value}
-            self.feed_params[feed].insert_one(param)
+            self.feed_params[feed_type].insert_one({"name": "stream_params", "value": value})
+
 
     def loadParams(self):
-        for feed in feeds:
-            self.setParameter(feed, "feed", feeds[feed])
-        self.setParameter(name="stream_params", value=stream_params, feed="stream_params")
+        for feed_name in feeds:
+            self.setParameter(feed_type="results", value=feeds[feed_name], name=feed_name)
+        self.setParameter(value=stream_params, feed_type="stream_params")
+        self.setParameter(value=summary_feeds, feed_type="summary_feeds")
+        self.setParameter(value=objects, feed_type="mapper")
+        self.setParameter(value=home_config, feed_type="home_config")
+
