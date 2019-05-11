@@ -47,6 +47,7 @@ class Market:
                                                                                                              **routing_params, **feed_params)
         request = r.get(routingEndpoint)
         self.webCrawler.driver.get(request.text)
+        logging.info("navigated home")
         return routingEndpoint
 
     def setHome(self, make=None, model=None, sort=None):
@@ -58,10 +59,12 @@ class Market:
     def publishListOfResults(self):
         parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source, features="html.parser")
         results = parser.findAll(attrs={"class": feed_params['result_stream'].get("class")})
+        logging.debug("parsed {} results".format(len(results)))
         i = 0
         for result in results:
             data = dict(value=bytes(str(result), 'utf-8'),
                         key=bytes("{}_{}".format(self.webCrawler.driver.current_url, i), 'utf-8'))
             self.kafkaProducer.send(topic="{name}-results".format(**feed_params), **data)
             i += 1
+            logging.debug("published {} results".format(i))
         logging.info(msg="parsed {} results".format(i))

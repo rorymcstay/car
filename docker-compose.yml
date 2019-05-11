@@ -6,15 +6,13 @@ services:
 
   feed:
     container_name: feed
-    build: "./feed"
+    build: ./feed
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - kafka
       - router
       - nanny
-    ports:
-      - "5001:5000"
     stop_grace_period: 5s
     env_file:
       - feed_platform/docker.env
@@ -22,6 +20,8 @@ services:
   worker:
     container_name: worker
     build: ./worker
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
     - kafka
     - nanny
@@ -31,7 +31,7 @@ services:
 
   router:
     container_name: router
-    build: "./routing"
+    build: ./routing
     depends_on:
     - hazelcast
     ports:
@@ -42,7 +42,7 @@ services:
 
   nanny:
     container_name: nanny
-    build: "./nanny"
+    build: ./nanny
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -91,15 +91,17 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: root
 
   zookeeper:
-    image: 'bitnami/zookeeper:latest'
+    image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
     ports:
       - '2181:2181'
     environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
       - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOOKEEPER_TICK_TIME=2000
 
   kafka:
-    image: 'bitnami/kafka:latest'
+    image: confluentinc/cp-kafka:latest
     container_name: kafka
     ports:
      - '9092:9092'
@@ -109,10 +111,9 @@ services:
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items;worker-queue"
-      - KAFKA_ADVERTISED_PORT=9092
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -128,7 +129,7 @@ services:
     ports:
     - 5701:5701
     links:
-    - "management-center:mancenter"
+    - management-center:mancenter
 
     #management center
   management-center:

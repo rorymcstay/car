@@ -86,7 +86,7 @@ class Worker:
                 port = requests.get(
                     "http://{host}:{port}/{api_prefix}/getContainer/{submission_port}".format(**nanny_params,
                                                                                               submission_port=port)).text
-                return self.startWebdriverSession(port)
+                return self.startWebdriverSession(port, attempts)
 
     def publishObject(self, url, streamName):
         """
@@ -99,7 +99,7 @@ class Worker:
         try:
             webTime = time()
             self.driver.get(url)
-            logging.debug(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,time_elapsed=time() - webTime))
+            logging.info(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,time_elapsed=time() - webTime))
             element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
             WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
             parser = bs4.BeautifulSoup(self.driver.page_source)

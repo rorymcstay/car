@@ -1,7 +1,7 @@
 import logging
 import os
 import signal
-from time import time
+from time import time, sleep
 
 import requests
 from flask import Flask
@@ -30,11 +30,12 @@ if __name__ == '__main__':
     killer = GracefulKiller()
     custom_fig = Figlet()
     print(custom_fig.renderText('{name}-feed'.format(**feed_params)))
-    timeStart = time()
     while True:
+        timeStart = time()
         market.publishListOfResults()
         market.webCrawler.nextPage()
         logging.info(msg="published page to kafka results in {}".format(time() - timeStart))
+        sleep(1)
         if killer.kill_now:
             market.webCrawler.driver.close()
             requests.get("https://{host}:{port}/{api_prefix}/{}".format(market.webCrawler.port, **routing_params))
