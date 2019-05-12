@@ -123,7 +123,7 @@ class Worker:
         except WebDriverException:
             logging.error("webdriver exception")
             traceback.print_exc()
-            requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{req_port}".format(req_port = self.port, **nanny_params))
+            requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{req_port}".format(req_port=self.port, **nanny_params))
             self.__init__()
 
     def main(self):

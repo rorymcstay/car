@@ -1,7 +1,3 @@
-tensorflow
-numpy
-pymongo
-bson
-pandas
 requests
 sklearn
+hazelcast-python-client

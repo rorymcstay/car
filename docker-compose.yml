@@ -1,8 +1,6 @@
 version: '2'
 
 services:
-  #TODO formalise the environment variable files for docker and local
-  # local.env and docker.env should be committed
 
   feed:
     container_name: feed
@@ -66,6 +64,16 @@ services:
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env
+
+  jupyter:
+    container_name: jupyter
+    build: ./learning
+    volumes:
+      - ./learning/notebooks:/home/notebooks
+    ports:
+      - "8888:8888"
+    env_file:
+      - feed_platform/docker.env
 
   mapper:
     container_name: mapper

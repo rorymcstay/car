@@ -1,3 +1,4 @@
+import logging
 import logging as log
 import re
 import traceback
@@ -100,19 +101,20 @@ class WebCrawler:
             return True
 
     def nextPage(self, attempts=0):
+        logging.info("going to next page from {}".format(self.driver.current_url))
         if attempts < WebCrawlerConstants().max_attempts and self.resultPage():
             try:
                 button = self.getNextButton()
             except NoSuchElementException as e:
                 attempts = attempts + 1
                 sleep(attempts)
-                LOG.warning("Could not find next button %s", e.msg)
+                logging.warning("Could not find next button %s", e.msg)
                 self.nextPage(attempts)
                 return
             except StaleElementReferenceException as e:
                 attempts = attempts + 1
                 sleep(attempts)
-                LOG.warning("Could not find next button %s", e.msg)
+                logging.warning("Could not find next button %s", e.msg)
                 self.nextPage(attempts)
                 return
             try:

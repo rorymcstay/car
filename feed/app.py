@@ -10,7 +10,6 @@ from selenium.common.exceptions import WebDriverException
 
 from settings import feed_params, nanny_params
 from src.main.market.Market import Market
-from src.main.service.rest.Command import Command
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logging.FileHandler('/var/tmp/myapp.log')
@@ -25,7 +24,7 @@ class GracefulKiller:
         self.kill_now = True
 
 market: Market = Market()
-market.setHome(make="Porsche", model="Cayenne", sort="newest")
+market.setHome(make="BMW", model="3-Series", sort="newest")
 if __name__ == '__main__':
     killer = GracefulKiller()
     custom_fig = Figlet()
@@ -47,7 +46,6 @@ if __name__ == '__main__':
                                                                                                **nanny_params))
 
 app = Flask(__name__)
-Command.register(app)
 
 if __name__ == '__main__':
     print(app.url_map)

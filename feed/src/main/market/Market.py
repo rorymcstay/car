@@ -66,7 +66,7 @@ class Market:
     def publishListOfResults(self):
         parser = bs4.BeautifulSoup(self.webCrawler.driver.page_source, features="html.parser")
         results = parser.findAll(attrs={"class": feed_params['result_stream'].get("class")})
-        logging.debug("parsed {} results".format(len(results)))
+        logging.debug("parsed {} results from {}".format(len(results), self.webCrawler.driver.current_url))
         i = 0
         for result in results:
             data = dict(value=bytes(str(result), 'utf-8'),
@@ -74,4 +74,4 @@ class Market:
             self.kafkaProducer.send(topic="{name}-results".format(**feed_params), **data)
             i += 1
             logging.debug("published {} results".format(i))
-        logging.info(msg="parsed {} results".format(i))
+        logging.info("parsed {} results from {}".format(len(results), self.webCrawler.driver.current_url))

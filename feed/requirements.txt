@@ -5,7 +5,5 @@ flask-classy
 selenium
 pymongo
 beautifulsoup4
-pyyaml
-docker
 hazelcast-python-client
 kafka-python

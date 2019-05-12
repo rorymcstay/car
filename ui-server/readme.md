@@ -7,4 +7,6 @@
 5. return the feed to the home page.
 6. Scale up workers
 7. Browser container status
-8.
+8. display a list of histories for feeds
+9. reset nanny container monitoring
+10.

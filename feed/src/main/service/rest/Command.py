@@ -2,12 +2,7 @@ from time import time
 
 from flask_classy import FlaskView, route
 
-from src.main.market.Market import Market
-from src.main.service.mongo_service.MongoService import MongoService
 
-service = MongoService('{}:{}'.format('0.0.0.0', 27017))
-
-market = Market()
 class Command(FlaskView):
     """
     Flask Classy object which contains a dictionary of Markets. On start up it loads market definitions from the

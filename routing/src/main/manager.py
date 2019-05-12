@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+import time
 
 from hazelcast import HazelcastClient, ClientConfig
 from hazelcast.proxy import List
@@ -20,13 +20,15 @@ class RoutingManager(object):
         return url
 
     def updateHistory(self, name, value):
-        history: List = self.hz.get_list("{}-history-{}".format(name, datetime.now().strftime("dd_mm_YY")))
+        histName = "{}-history-{}".format(name,  time.strftime("%d_%m"))
+        history: List = self.hz.get_list(histName)
         history.add(value)
-        logging.info("history updated for {}".format(name))
+        logging.info("history updated for {}".format(histName))
         return "added one item to the cache"
 
     def getLastPage(self, name):
-        history: List = self.hz.get_list("{}-history".format(name))
+        histName = "{}-history-{}".format(name, time.strftime("%d_%m"))
+        history: List = self.hz.get_list(histName)
         size = history.size().result()
         return history.get(size-1).result()
 
