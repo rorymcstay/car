@@ -12,7 +12,11 @@ class ContainerController(FlaskView):
 
     @route("getContainer", methods=["GET"])
     def getContainer(self):
-        return self.containerManager.getContainer
+        return self.containerManager.getContainer()
+
+    @route("getMainContainer", methods=["GET"])
+    def getMainContainer(self):
+        return self.containerManager.getMainContainer()
 
     @route("freeContainer/<int:port>", methods=["GET"])
     def freeContainer(self, port):

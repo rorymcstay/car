@@ -18,9 +18,10 @@ class Container(Portable):
     FACTORY_ID = 666
     CLASS_ID = 2
 
-    def __init__(self, port=None, active="yes"):
+    def __init__(self, port=None, active="yes", status=None):
         self.port = port
         self.active = active
+        self.status = status
 
     def write_portable(self, writer: ClassDefinitionWriter):
         """
@@ -29,9 +30,11 @@ class Container(Portable):
         """
         writer.write_int("port", self.port)
         writer.write_utf("active", self.active)
+        writer.write_utf("status", self.status)
 
     def read_portable(self, reader):
         self.active = reader.read_utf("active")
+        self.status = reader.read_utf("status")
         self.port = reader.read_int("port")
 
     def get_factory_id(self):
@@ -41,46 +44,52 @@ class Container(Portable):
         return self.CLASS_ID
 
     def __str__(self):
-        return "Container {} is {}".format(self.port, "active" if self.active.upper() == "yes".upper() else "not active")
+        return "Container {} is {} and ".format(self.port,
+                                           "active" if self.active.upper() == "yes".upper() else "not active", self.status)
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.port == other.name and self.active == other.active
+        return type(self) == type(other) and self.port == other.name
 
 
 class ContainerManager:
-    container_map=os.getenv("CONTAINER_MAP_NAME", "browser_containers")
-    ports = [{"port": 4444 + i, "active": 'no'} for i in range(browser_params["max"])]
+    container_map = os.getenv("CONTAINER_MAP_NAME", "browser_containers")
+    mainPort = int(os.getenv("MAIN_PORT", 4444))
+    ports = [mainPort + i for i in range(browser_params["max"])]
     client = docker.client.from_env()
     config = ClientConfig()
-    config.serialization_config.portable_factories[Container.FACTORY_ID] = \
-        {Container.CLASS_ID: Container}
+    config.serialization_config.portable_factories[Container.FACTORY_ID] = {Container.CLASS_ID: Container}
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     hz = HazelcastClient(config)
 
     for port in ports:
-        try:
-            client.containers.run(client.images.get(browser_params['image']),
-                                  detach=True,
-                                  name='worker-{}'.format(port["port"]),
-                                  ports={'4444/tcp': port["port"]},
-                                  remove=True)
-            logging.info("started container {}".format(port["port"]))
-            hz.get_map(container_map).put(key=port["port"], value=Container(port=port["port"], active="no"))
+        hz.get_map(container_map).put_all().put(key=port, value=Container(port=port, active='no')).result()
 
-        except APIError as e:
-            if e.status_code == 409:
-                client.containers.get('worker-{}'.format(port["port"]))
-                hz.get_map(container_map).put(key=port["port"], value=Container(port=port["port"], active="no"))
-                logging.info("reconnected with container {}".format(port["port"]))
-
-    def resetCache(self):
+    def resetContainers(self):
         map = self.hz.get_map(self.container_map)
         map.evict_all()
         for port in self.ports:
-            map.put(key=port["port"], value=Container(port=port["port"], active='no')).result()
+            self.client.containers.get("worker-{}".format(port)).kill()
+            map.put(key=port, value=Container(port=port, active='no', status='reset')).result()
         return 'ok'
 
-    @property
+    def getMainContainer(self):
+        map = self.hz.get_map(self.container_map)
+        main: Container = map.get(key=self.mainPort)
+        if main.active == "yes":
+            browser: Browser = self.client.containers.get('worker-{port}'.format(port=self.mainPort))
+            if browser.status == 'exited':
+                browser.start()
+            else:
+                browser.restart()
+        else:
+            browser = self.client.containers.run(self.client.images.get(browser_params['image']),
+                                                 detach=True,
+                                                 name='worker-{}'.format(self.mainPort),
+                                                 ports={'4444/tcp': self.mainPort},
+                                                 restart_policy='always')
+            self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
+            return str(self.mainPort)
+
     def getContainer(self):
 
         workerPorts = self.hz.get_map(self.container_map)
@@ -116,7 +125,7 @@ class ContainerManager:
         item = Container(port=port, active="no")
         workerPorts.replace(key=port, value=item)
         browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
-        browser.restart()
+        browser.kill()
 
         # TODO handle restarting container here - test that you can use a container after running for some time
         return "ok"

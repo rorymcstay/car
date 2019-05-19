@@ -33,7 +33,7 @@ class WebCrawler:
         """
 
         """
-        port = r.get("http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params, submission_port=port)).text
+        port = r.get("http://{host}:{port}/{api_prefix}/getMainContainer".format(**nanny_params, submission_port=port)).text
         self.number_of_pages = None
         self.last_result = None
         url = "http://{host}:{port}/wd/hub".format(host=browser_params["host"], port=port)

@@ -131,10 +131,15 @@ class Worker:
         self.consumer.subscribe(["worker-queue"])
         while 1:
             item: ConsumerRecord
-            for item in self.consumer:
-                print(item)
-                self.publishObject(url=item.value["url"], streamName=item.value["type"])
-                if killer.kill_now:
-                    requests.get(
-                        "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
-                    self.consumer.close()
+            try:
+                for item in self.consumer:
+                    print(item)
+                    self.publishObject(url=item.value["url"], streamName=item.value["type"])
+                    if killer.kill_now:
+                        requests.get(
+                            "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
+                        self.consumer.close()
+            except Exception:
+                requests.get(
+                    "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
+                self.consumer.close()
