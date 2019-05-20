@@ -2,9 +2,10 @@ version: '2'
 
 services:
 
-  feed:
-    container_name: feed
+  donedeal:
+    container_name: donedeal
     build: ./feed
+    restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -12,8 +13,28 @@ services:
       - router
       - nanny
     stop_grace_period: 5s
+    environment:
+      NAME: donedeal
+      BROWSER_PORT: 4000
     env_file:
       - feed_platform/docker.env
+
+  pistonheads:
+    container_name: pistonheads
+    build: ./feed
+    restart: always
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - kafka
+    - router
+    - nanny
+    stop_grace_period: 5s
+    environment:
+      NAME: pistonheads
+      BROWSER_PORT: 6000
+    env_file:
+    - feed_platform/docker.env
 
   worker:
     build: ./worker
@@ -25,7 +46,6 @@ services:
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env
-
 
   router:
     container_name: router
@@ -42,11 +62,14 @@ services:
     container_name: nanny
     build: ./nanny
     volumes:
+    - ./config:/home/config
     - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
     - hazelcast
     ports:
     - "5003:5000"
+    environment:
+      BROWSER_BASE_PORT: 4444
     stop_grace_period: 5s
     env_file:
       - feed_platform/docker.env

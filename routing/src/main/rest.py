@@ -32,4 +32,9 @@ class RoutingController(FlaskView):
         :param name:
         :return:
         """
-        return self.routingManager.getLastPage(name)
+        lastPage = self.routingManager.getLastPage(name)
+        if lastPage:
+            return lastPage
+        else:
+            return "none"
+

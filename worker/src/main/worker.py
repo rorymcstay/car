@@ -133,7 +133,6 @@ class Worker:
             item: ConsumerRecord
             try:
                 for item in self.consumer:
-                    print(item)
                     self.publishObject(url=item.value["url"], streamName=item.value["type"])
                     if killer.kill_now:
                         requests.get(

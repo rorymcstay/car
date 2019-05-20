@@ -38,7 +38,8 @@ class Market:
     def renewWebCrawler(self):
         self.webCrawler.quit()
         self.webCrawler = WebCrawler()
-        last = r.get("http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params)).text
+        last = r.get(
+            "http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params)).text
         logging.info("navigating to latest page {}".format(last))
         self.webCrawler.driver.get(last)
 
@@ -48,14 +49,17 @@ class Market:
         :return:
         """
 
-        routingEndpoint = "http://{host}:{port}/{api_prefix}/getBaseUrl/{name}/{make}/{model}/{sort}".format(make=self.make,
-                                                                                                             model=self.model,
-                                                                                                             sort=self.sort,
-                                                                                                             **routing_params, **feed_params)
-        request = r.get(routingEndpoint)
-        self.webCrawler.driver.get(request.text)
+        home = r.get("http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(make=self.make, **routing_params, **feed_params))
+        if home.text=="none":
+            home = "http://{host}:{port}/{api_prefix}/getBaseUrl/{name}/{make}/{model}/{sort}".format(
+                make=self.make,
+                model=self.model,
+                sort=self.sort,
+                **routing_params, **feed_params)
+            home = r.get(home)
+        self.webCrawler.driver.get(home.text)
         logging.info("navigated home")
-        return routingEndpoint
+        return home
 
     def setHome(self, make=None, model=None, sort=None):
         self.make = make

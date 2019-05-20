@@ -14,17 +14,17 @@ class ContainerController(FlaskView):
     def getContainer(self):
         return self.containerManager.getContainer()
 
-    @route("getMainContainer", methods=["GET"])
-    def getMainContainer(self):
-        return self.containerManager.getMainContainer()
+    @route("getMainContainer/<int:port>", methods=["GET"])
+    def getMainContainer(self, port):
+        return self.containerManager.getMainContainer(port)
 
     @route("freeContainer/<int:port>", methods=["GET"])
     def freeContainer(self, port):
         return self.containerManager.freeContainer(port)
 
-    @route("resetCache", methods=['GET'])
+    @route("resetContainers", methods=['GET'])
     def resetCache(self):
-        return self.containerManager.resetCache()
+        return self.containerManager.resetContainers()
 
     @route("cleanUpContainers", methods=["GET"])
     def cleanUpContainers(self):
@@ -55,7 +55,15 @@ class ParameterController(FlaskView):
         self.parameterManager.setParameter(name=name, feed_type=feed, value=value)
         return "ok"
 
-    @route("/loadParams")
-    def loadParams(self):
-        self.parameterManager.loadParams()
-        return "ok"
+    # TODO load params from config/params directory of specified date
+    # @route("/loadParams")
+    # def loadParams(self):
+    #     self.parameterManager.loadParams()
+    #     return "ok"
+
+    @route("/exportParameters")
+    def saveParameters(self):
+        notes = str(request.data)
+        return json.dumps(self.parameterManager.exportParameters(notes))
+
+

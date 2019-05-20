@@ -1,14 +1,14 @@
 import logging
 import os
 import signal
+import traceback
 from time import time, sleep
 
 import requests
 from flask import Flask
-from pyfiglet import Figlet
 from selenium.common.exceptions import WebDriverException
 
-from settings import feed_params, nanny_params
+from settings import nanny_params
 from src.main.market.Market import Market
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -27,8 +27,6 @@ market: Market = Market()
 market.setHome(make="BMW", model="3-Series", sort="newest")
 if __name__ == '__main__':
     killer = GracefulKiller()
-    custom_fig = Figlet()
-    print(custom_fig.renderText('{name}-feed'.format(**feed_params)))
     while True:
         timeStart = time()
         try:
@@ -37,7 +35,10 @@ if __name__ == '__main__':
         except WebDriverException as e:
             logging.warning("webdriver error, renewing webcrawler")
             market.renewWebCrawler()
-
+        except TypeError as e:
+            traceback.print_exc()
+            logging.warning("type error - {}".format(e.args[0]))
+            market.webCrawler.driver.refresh()
         logging.info(msg="published page to kafka results in {}".format(time() - timeStart))
         sleep(1)
         if killer.kill_now:

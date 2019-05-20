@@ -11,7 +11,7 @@ hazelcast_params = {
 }
 
 browser_params = {
-    "port": os.getenv("BROWSER_BASE_PORT", 4444),
+    "port": os.getenv("BROWSER_PORT", 4444),
     "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal"),
     "image": os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome:3.141.59')
 

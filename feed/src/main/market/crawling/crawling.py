@@ -14,6 +14,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.remote.remote_connection import LOGGER
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib3.exceptions import MaxRetryError, ProtocolError
@@ -29,11 +30,13 @@ LOG = LogGenerator(log, name='webcrawler')
 
 class WebCrawler:
 
+    driver: WebDriver
+
     def __init__(self, port=browser_params["port"]):
         """
 
         """
-        port = r.get("http://{host}:{port}/{api_prefix}/getMainContainer".format(**nanny_params, submission_port=port)).text
+        port = r.get("http://{host}:{port}/{api_prefix}/getMainContainer/{submission_port}".format(**nanny_params, submission_port=port)).text
         self.number_of_pages = None
         self.last_result = None
         url = "http://{host}:{port}/wd/hub".format(host=browser_params["host"], port=port)

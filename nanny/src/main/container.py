@@ -53,55 +53,64 @@ class Container(Portable):
 
 class ContainerManager:
     container_map = os.getenv("CONTAINER_MAP_NAME", "browser_containers")
-    mainPort = int(os.getenv("MAIN_PORT", 4444))
-    ports = [mainPort + i for i in range(browser_params["max"])]
+    mainPorts = []
+    workerPorts = [int(browser_params["base_port"]) + i for i in range(browser_params["max"])]
     client = docker.client.from_env()
     config = ClientConfig()
     config.serialization_config.portable_factories[Container.FACTORY_ID] = {Container.CLASS_ID: Container}
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     hz = HazelcastClient(config)
 
-    for port in ports:
-        hz.get_map(container_map).put_all().put(key=port, value=Container(port=port, active='no')).result()
+    for port in workerPorts:
+        hz.get_map(container_map).put(key=port, value=Container(port=port, active='no' if port is not 4444 else "yes", status="not started")).result()
 
     def resetContainers(self):
         map = self.hz.get_map(self.container_map)
         map.evict_all()
-        for port in self.ports:
+        for port in self.workerPorts:
             self.client.containers.get("worker-{}".format(port)).kill()
             map.put(key=port, value=Container(port=port, active='no', status='reset')).result()
         return 'ok'
 
-    def getMainContainer(self):
+    def getMainContainer(self, port):
+        """
+        return the main port associated with a running browser container. Intended to be called by
+        the feed
+        :return: string of the main port
+        """
         map = self.hz.get_map(self.container_map)
-        main: Container = map.get(key=self.mainPort)
-        if main.active == "yes":
-            browser: Browser = self.client.containers.get('worker-{port}'.format(port=self.mainPort))
-            if browser.status == 'exited':
-                browser.start()
-            else:
-                browser.restart()
-        else:
-            browser = self.client.containers.run(self.client.images.get(browser_params['image']),
+        try:
+            browser: Browser = self.client.containers.run(self.client.images.get(browser_params['image']),
                                                  detach=True,
-                                                 name='worker-{}'.format(self.mainPort),
-                                                 ports={'4444/tcp': self.mainPort},
-                                                 restart_policy='always')
+                                                 name='worker-{}'.format(port),
+                                                 ports={'4444/tcp': port},
+                                                 restart_policy={"Name": 'always'})
             self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
-            return str(self.mainPort)
+        except APIError as e:
+            if e.status_code == 409:
+                browser = self.client.containers.get('worker-{port}'.format(port=port))
+                browser.restart()
+            else:
+                raise e
+        map.put(key=port, value=Container(port, active="yes", status=browser.status))
+        return str(port)
 
     def getContainer(self):
+        """
+        return a port associated with a running browser container which is not the mainPort
+
+        :return:
+        """
 
         workerPorts = self.hz.get_map(self.container_map)
         unused = workerPorts.values(sql("active = 'no'")).result()
         if len(unused) == 0:
             return "max containers reached"
-
         else:
-            workerPorts.replace(key=unused[0].port, value=Container(port=unused[0].port, active="yes")).result()
-            port = unused[0].port
+            port = unused[0]
             try:
                 browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
+                workerPorts.replace(key=port, value=Container(port=port, active="yes", status=browser.status)).result()
                 browser.restart()
             except APIError as e:
                 if e.status_code == 404:
@@ -117,7 +126,7 @@ class ContainerManager:
 
     def getContainerStatus(self):
         map: Map = self.hz.get_map(self.container_map)
-        items = map.get_all(keys=[port["port"] for port in self.ports]).result()
+        items = map.get_all(keys=[port for port in self.ports]).result()
         return [str(items[item]) for item in items]
 
     def freeContainer(self, port):
@@ -126,7 +135,6 @@ class ContainerManager:
         workerPorts.replace(key=port, value=item)
         browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
         browser.kill()
-
         # TODO handle restarting container here - test that you can use a container after running for some time
         return "ok"
 

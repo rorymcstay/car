@@ -29,6 +29,9 @@ class RoutingManager(object):
     def getLastPage(self, name):
         histName = "{}-history-{}".format(name, time.strftime("%d_%m"))
         history: List = self.hz.get_list(histName)
+        num = history.size().result()
+        if num < 1:
+            return False
         size = history.size().result()
         return history.get(size-1).result()
 

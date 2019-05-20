@@ -1,6 +1,9 @@
 import os
+from datetime import datetime
 
+import bson.json_util as json
 import pymongo
+from pymongo.database import Database
 
 from settings import mongo_params, feeds, stream_params, summary_feeds, objects, home_config
 
@@ -12,7 +15,7 @@ class ParameterManager:
 
     """
     client = pymongo.MongoClient(**mongo_params)
-    feed_params = client[os.getenv("PARAMETER_DATABASE", "params")]
+    feed_params: Database = client[os.getenv("PARAMETER_DATABASE", "params")]
 
     def getParameter(self, feed_type, name=None):
         if name is not None:
@@ -41,4 +44,26 @@ class ParameterManager:
         self.setParameter(value=summary_feeds, feed_type="summary_feeds")
         self.setParameter(value=objects, feed_type="mapper")
         self.setParameter(value=home_config, feed_type="home_config")
+
+    def exportParameters(self, notes):
+
+        collections = self.feed_params.list_collection_names()
+        if os.path.exists("./config/params"):
+            os.rename("./config/params", "config/params_{}".format(datetime.now().strftime("%d%m%y-%H%M")))
+        os.makedirs("./config/params/", exist_ok=True)
+        for collection in collections:
+            cursor = self.feed_params[collection].find({})
+            with open("./config/params/{}.json".format(collection), "w") as file:
+                file.write('[')
+                for document in cursor:
+                    file.write(json.dumps(document))
+                    file.write(',')
+                file.write(']')
+
+        with open("./config/params/notes.txt", "w") as file:
+            file.write(notes)
+        return os.listdir("./config/params")
+
+
+
 

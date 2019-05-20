@@ -22,7 +22,5 @@ class ResultLoader:
             parser = ObjectParser(feedName=feed, source=message.value)
             raw = parser.getRawJson(message.key)
             value = parser.normalizeJson(raw)
-            print(json.dumps(value, indent=4))
             self.cacheManager.insertResult(mapName="{}-items".format(feed), result=value, key=str(message.key).split("/")[-1])
-
             logging.info("parsed car object from {} and inserted into cache with key {}".format(message.key, str(message.key).split("/")[-1]))
