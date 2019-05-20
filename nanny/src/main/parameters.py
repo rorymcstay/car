@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 
 import bson.json_util as json
+import checksumdir
 import pymongo
 from pymongo.database import Database
 
@@ -49,7 +50,9 @@ class ParameterManager:
 
         collections = self.feed_params.list_collection_names()
         if os.path.exists("./config/params"):
-            os.rename("./config/params", "config/params_{}".format(datetime.now().strftime("%d%m%y-%H%M")))
+            old = "config/params_{}".format(datetime.now().strftime("%d%m%y-%H%M"))
+            os.rename("./config/params", old)
+            verOld = checksumdir.dirhash(old)
         os.makedirs("./config/params/", exist_ok=True)
         for collection in collections:
             cursor = self.feed_params[collection].find({})
@@ -59,7 +62,10 @@ class ParameterManager:
                     file.write(json.dumps(document))
                     file.write(',')
                 file.write(']')
-
+        verNew = checksumdir.dirhash("./config/params")
+        if verOld and old is not None:
+            if verNew == verOld:
+                os.rmdir(old)
         with open("./config/params/notes.txt", "w") as file:
             file.write(notes)
         return os.listdir("./config/params")
