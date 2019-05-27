@@ -1,4 +1,5 @@
-import logging
+import itertools
+import json
 import logging as log
 
 import bs4
@@ -6,18 +7,17 @@ import requests as r
 from kafka import KafkaProducer
 
 from settings import kafka_params, routing_params, feed_params
-from src.main.market.crawling.crawling import WebCrawler
-from src.main.utils.LogGenerator import LogGenerator
+from src.main.crawling import WebCrawler
 
-LOG = LogGenerator(log, name='market')
+logging = log.getLogger(__name__)
 
 
-class Market:
+class FeedManager:
     _instance = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(Market, cls).__new__(
+            cls._instance = super(FeedManager, cls).__new__(
                 cls, *args, **kwargs)
         return cls._instance
 
@@ -41,24 +41,37 @@ class Market:
         last = r.get(
             "http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params)).text
         logging.info("navigating to latest page {}".format(last))
-        self.webCrawler.driver.get(last)
+        self.webCrawler.driver.get(last.split(",")[0])
 
     def goHome(self):
         """
-        navigate back to the base url
+        navigate back to the base url, router sends a string like "url,multiple"
         :return:
         """
 
-        home = r.get("http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(make=self.make, **routing_params, **feed_params))
-        if home.text=="none":
-            home = "http://{host}:{port}/{api_prefix}/getBaseUrl/{name}/{make}/{model}/{sort}".format(
-                make=self.make,
-                model=self.model,
-                sort=self.sort,
-                **routing_params, **feed_params)
-            home = r.get(home)
-        self.webCrawler.driver.get(home.text)
-        logging.info("navigated home")
+        home = r.get("http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params))
+
+        if home.text == "none":
+            home = "http://{host}:{port}/{api_prefix}/getResultPageUrl/{name}".format(**routing_params, **feed_params)
+            home = r.get(home, data=json.dumps(dict(make=self.make,
+                                                    model=self.model,
+                                                    sort=self.sort)),
+                         headers={"content-type": "application/json"})
+            url = home.text
+        elif "PAGE" in home.json()["url"]:
+            data = home.json()
+            url = str(data["url"])
+            split = url.split("=")
+            for (num, l) in enumerate(split):
+                if "page" in l.lower():
+                    self.webCrawler.page = int("".join(itertools.takewhile(str.isdigit, split[num + 1])))/int(data["increment"])
+                    break
+        else:
+            data = home.json()
+            url = str(data["url"])
+        logging.debug("navigating to starting point {}".format(url))
+        self.webCrawler.driver.get(url)
+        logging.info("navigated to {} ok".format(url))
         return home
 
     def setHome(self, make=None, model=None, sort=None):

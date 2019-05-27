@@ -1,19 +1,22 @@
+from flask import jsonify
 from flask import request
 from flask_classy import FlaskView, route
 
+from settings import home_config
 from src.main.manager import RoutingManager
 
 
 class RoutingController(FlaskView):
     routingManager = RoutingManager()
 
-    @route("getBaseUrl/<string:name>/<string:make>/<string:model>/<string:sort>", methods=["GET"])
-    def getBaseUrl(self, name, make, model, sort):
+    @route("getResultPageUrl/<string:name>")
+    def getResultPageUrl(self, name):
         """
         return the home adress of market to the client
         :return:
         """
-        return self.routingManager.getBaseUrl(name, make, model, sort)
+        options = request.json
+        return self.routingManager.getResultPageUrl(name=name, **options)
 
     @route("updateHistory/<string:name>", methods=["PUT"])
     def updateHistory(self, name):
@@ -34,7 +37,15 @@ class RoutingController(FlaskView):
         """
         lastPage = self.routingManager.getLastPage(name)
         if lastPage:
-            return lastPage
+
+            resp = jsonify({"url": lastPage, "increment":home_config.get(name).get("page").get("increment")})
+            resp.status_code = 200
+            return resp
         else:
             return "none"
+
+    @route("clearHistory/<string:name>", methods=["DELETE"])
+    def clearHistory(self, name):
+        self.routingManager.clearHistory(name)
+        return "ok"
 

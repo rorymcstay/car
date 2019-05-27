@@ -50,6 +50,7 @@ services:
   router:
     container_name: router
     build: ./routing
+    restart: always
     depends_on:
     - hazelcast
     ports:
@@ -61,6 +62,7 @@ services:
   nanny:
     container_name: nanny
     build: ./nanny
+    restart: always
     volumes:
     - ./config:/home/config
     - /var/run/docker.sock:/var/run/docker.sock
@@ -155,7 +157,7 @@ services:
       - zookeeper:zk
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items;worker-queue"
+      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items;pistonheads-items;pistonheads-results;worker-queue"
       - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092

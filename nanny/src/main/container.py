@@ -126,7 +126,7 @@ class ContainerManager:
 
     def getContainerStatus(self):
         map: Map = self.hz.get_map(self.container_map)
-        items = map.get_all(keys=[port for port in self.ports]).result()
+        items = map.get_all(keys=[port for port in self.workerPorts]).result()
         return [str(items[item]) for item in items]
 
     def freeContainer(self, port):

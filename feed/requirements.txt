@@ -1,9 +1,5 @@
-pyfiglet
 requests
-flask
-flask-classy
 selenium
-pymongo
 beautifulsoup4
 hazelcast-python-client
 kafka-python

@@ -16,4 +16,4 @@ RoutingController.register(app)
 
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(port=os.getenv("FLASK_PORT"), host="0.0.0.0")
+    app.run(port=os.getenv("FLASK_PORT", 5002), host="0.0.0.0")
