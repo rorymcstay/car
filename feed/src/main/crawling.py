@@ -111,7 +111,7 @@ class WebCrawler:
 
     def nextPage(self, attempts=0):
 
-        logging.info("going to next page from {}".format(self.driver.current_url))
+        logging.info("attempt {}: going to next page from {}".format(attempts, self.driver.current_url))
         if not attempts > 0:
             r.put("http://{host}:{port}/{api_prefix}/updateHistory/{name}".format(name=feed_params["name"],
                                                                                   **routing_params),
@@ -130,7 +130,7 @@ class WebCrawler:
                 return
             except WebDriverException as e:
                 raise NextPageException(self.page, e.msg)
-        raise NextPageException(self.page, e.msg)
+        raise NextPageException(self.page, "maximum attempts reached")
 
     def getNextButton(self, attempts=0) -> WebElement:
         while attempts < WebCrawlerConstants().max_attempts:

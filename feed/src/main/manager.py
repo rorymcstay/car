@@ -39,9 +39,9 @@ class FeedManager:
         self.webCrawler.quit()
         self.webCrawler = WebCrawler()
         last = r.get(
-            "http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params)).text
+            "http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params))
         logging.info("navigating to latest page {}".format(last))
-        self.webCrawler.driver.get(last.split(",")[0])
+        self.webCrawler.driver.get(last.json()["url"])
 
     def goHome(self):
         """
