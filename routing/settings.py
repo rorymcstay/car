@@ -9,8 +9,6 @@ nanny_params = {
     "params_manager": "parametercontroller"
 }
 
-home_config = requests.get("http://{host}:{port}/{params_manager}/getParameter/home_config".format(**nanny_params)).json()
-
 hazelcast_params = {
     "host": os.getenv("HAZELCAST_HOST", "localhost"), "port": os.getenv("HAZELCAST_PORT", 5701)
 }

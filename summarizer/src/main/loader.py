@@ -1,16 +1,18 @@
 import json
+import os
+
 from time import sleep
 
 from kafka import KafkaConsumer, KafkaProducer
 
-from settings import kafka_params, summary_feeds
+from settings import kafka_params
 from src.main.manager import CacheManager
 from src.main.parser import ResultParser
 
 
 class ResultLoader():
 
-    markets = ["{feed}-results".format(feed=name) for name in summary_feeds.keys()]
+    markets = ["{feed}-results".format(feed=name) for name in os.getenv("FEEDS").split(";")]
     cacheManager = CacheManager()
     kafkaConsumer = KafkaConsumer(**kafka_params)
     producer = KafkaProducer(**kafka_params, value_serializer=lambda v: json.dumps(v).encode('utf-8'))

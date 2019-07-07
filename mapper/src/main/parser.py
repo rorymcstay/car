@@ -3,18 +3,21 @@ import logging
 import traceback
 
 import bs4
+import requests
 from slimit import ast
 from slimit.parser import Parser as JavascriptParser
 from slimit.visitors import nodevisitor
 
-from settings import objects
+from settings import nanny_params
 from src.main.exceptions import ResultCollectionFailure
 from src.main.tools import find
 
 
 class ObjectParser:
     def __init__(self, feedName, source):
-        self.params = objects[feedName]
+        self.params = requests.get(
+            "http://{host}:{port}/{params_manager}/getParameter/mapper/{name}".format(**nanny_params,
+                                                                                      name=feedName)).json()
         self.soup = bs4.BeautifulSoup(source, features="html.parser")
 
     def getRawJson(self, url):
@@ -43,7 +46,7 @@ class ObjectParser:
 
         except Exception as e:
             traceback.print_exc()
-            error = ResultCollectionFailure(url=url, reason=traceback.format_exc(),exception=e)
+            error = ResultCollectionFailure(url=url, reason=traceback.format_exc(), exception=e)
             raise error
 
     def normalizeJson(self, rawJson):

@@ -18,9 +18,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import ProtocolError, MaxRetryError
 
-from settings import stream_params, kafka_params, nanny_params, browser_params
+from settings import kafka_params, nanny_params, browser_params
 
 
 class GracefulKiller:
@@ -58,32 +58,31 @@ class Worker:
         """
 
         port = requests.get("http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params)).text
-        self.driver = self.startWebdriverSession(port)
+        url = "http://worker-{port}:{base}/wd/hub".format(port=port, base=browser_params["base_port"])
+        self.driver = self.startWebdriverSession(port, url)
 
-    def startWebdriverSession(self, port, attempts=0):
+    def startWebdriverSession(self, port, url, attempts=0):
         options = Options()
         options.add_argument("--headless")
-        max_attempts = 10
+        max_attempts = 5
         try:
-            url = "http://{host}:{port}/wd/hub".format(port=port, host=browser_params["host"])
             driver = webdriver.Remote(command_executor=url,
                                       desired_capabilities=DesiredCapabilities.CHROME,
                                       options=options)
             self.port = port
             return driver
-        except (WebDriverException, ProtocolError, RemoteDisconnected) as e:
+        except (RemoteDisconnected, ProtocolError) as e:
+            attempts += 1
             logging.warning(
-                "failed to communicate with selenium at {} because of {}, trying again for {} more times".format(url, type(e),
-                                                                                                           max_attempts - attempts))
+                "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
             if attempts < max_attempts:
-                attempts += 1
                 sleep(3)
-                return self.startWebdriverSession(port, attempts)
+                self.startWebdriverSession(url, port, attempts)
             else:
-                requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{request_port}".format(request_port=port, **nanny_params))
-                port = requests.get(
-                    "http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params, submission_port=port)).text
-                return self.startWebdriverSession(port, attempts)
+                raise e
+        except MaxRetryError as e:
+            requests.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
+            self.startWebdriverSession(url, port, attempts)
 
     def publishObject(self, url, streamName):
         """
@@ -92,7 +91,9 @@ class Worker:
 
         :param results: the batch or urls
         """
-        stream = stream_params["{}".format(streamName)]
+        r = requests.get("http://{host}:{port}/parametercontroller/getParameter/worker/{name}".format(**nanny_params,
+                                                                                                    name=streamName))
+        stream = r.json()
         try:
             webTime = time()
             self.driver.get(url)
@@ -109,7 +110,7 @@ class Worker:
                 self.producer.send(topic="{name}-items".format(name=streamName),
                                    value=message,
                                    key=bytes(self.driver.current_url, 'utf-8'))
-                logging.info("published {}".format(self.driver.current_url))
+                logging.info("published result to kafka")
             else:
                 items = parser.findAll(attrs={"class": stream.get("class")})
                 i = 0
@@ -118,7 +119,7 @@ class Worker:
                     payload = dict(value=bytes(str(item), 'utf-8'),
                                    key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8'))
                     self.producer.send(topic="{name}-items".format(name=streamName), **payload)
-                logging.info("published {}".format(self.driver.current_url))
+                logging.info("published result to kafka")
 
         except WebDriverException:
             logging.error("webdriver exception")

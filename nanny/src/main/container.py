@@ -1,5 +1,7 @@
 import logging
 import os
+from typing import List
+
 from time import time
 
 import docker
@@ -62,15 +64,18 @@ class ContainerManager:
     hz = HazelcastClient(config)
 
     for port in workerPorts:
-        hz.get_map(container_map).put(key=port, value=Container(port=port, active='no' if port is not 4444 else "yes", status="not started")).result()
+        hz.get_map(container_map).put(key=port, value=Container(port=port, active='no', status="not started")).result()
 
     def resetContainers(self):
         map = self.hz.get_map(self.container_map)
-        map.evict_all()
         for port in self.workerPorts:
-            self.client.containers.get("worker-{}".format(port)).kill()
+            try:
+                self.client.containers.get("worker-{}".format(port)).kill()
+            except APIError as e:
+                logging.info("couldn't kill worker-{} {} - {}".format(port, e.explanation, e.status_code))
             map.put(key=port, value=Container(port=port, active='no', status='reset')).result()
-        return 'ok'
+        status = self.getContainerStatus()
+        return status
 
     def getMainContainer(self, port):
         """
@@ -84,7 +89,7 @@ class ContainerManager:
                                                  detach=True,
                                                  name='worker-{}'.format(port),
                                                  ports={'4444/tcp': port},
-                                                 restart_policy={"Name": 'always'})
+                                                 restart_policy={"Name": 'always'}, network=os.getenv("NETWORK", "car_default"))
             self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
         except APIError as e:
             if e.status_code == 409:
@@ -103,11 +108,11 @@ class ContainerManager:
         """
 
         workerPorts = self.hz.get_map(self.container_map)
-        unused = workerPorts.values(sql("active = 'no'")).result()
+        unused: List[Container] = workerPorts.values(sql("active = 'no'")).result()
         if len(unused) == 0:
             return "max containers reached"
         else:
-            port = unused[0]
+            port = unused[0].port
             try:
                 browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
                 workerPorts.replace(key=port, value=Container(port=port, active="yes", status=browser.status)).result()
@@ -117,9 +122,9 @@ class ContainerManager:
                     browser = self.client.containers.run(self.client.images.get(browser_params['image']),
                                                          detach=True,
                                                          name='worker-{}'.format(port),
-                                                         ports={'4444/tcp': port})
+                                                         ports={'4444/tcp': port}, network=os.getenv("NETWORK", "car_default"))
                 else:
-                    raise e
+                    return str(port)
             logging.info(msg='starting_browser named worker-{port}'.format(port=port))
             self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
             return str(port)
@@ -133,24 +138,25 @@ class ContainerManager:
         workerPorts = self.hz.get_map(self.container_map)
         item = Container(port=port, active="no")
         workerPorts.replace(key=port, value=item)
-        browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
-        browser.kill()
+        try:
+            browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
+            browser.kill()
+        except APIError as e:
+            logging.info("couldn't kill container {} - {}".format(e.explanation, e.status_code))
         # TODO handle restarting container here - test that you can use a container after running for some time
         return "ok"
 
-    def cleanUpContainers(self):
+    def cleanUpContainer(self, port):
         workerPorts = self.hz.get_map(self.container_map)
-        inactive = workerPorts.values(sql("active = 'no'")).result()
-        for container in inactive:
-            try:
-                res = self.client.containers.get("worker-{}".format(container.port))
-                res.kill()
-                res.remove()
-                logging.info("killed container {}".format(res))
-            except APIError as e:
-                if e.status_code == 404:
-                    logging.info("container not found, moving on")
-            workerPorts.replace(key=container.port, value=Container(container.port, "no"))
+        try:
+            res = self.client.containers.get("worker-{}".format(port))
+            res.kill()
+            res.remove()
+            logging.info("killed container {}".format(res))
+        except APIError as e:
+            if e.status_code == 404:
+                logging.info("container not found, moving on")
+        workerPorts.put(key=port, value=Container(port, "no"))
         return "ok"
 
     def wait_for_log(self, hub, partial_url):

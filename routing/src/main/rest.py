@@ -1,8 +1,9 @@
+import requests
 from flask import jsonify
 from flask import request
 from flask_classy import FlaskView, route
 
-from settings import home_config
+from settings import nanny_params
 from src.main.manager import RoutingManager
 
 
@@ -37,8 +38,7 @@ class RoutingController(FlaskView):
         """
         lastPage = self.routingManager.getLastPage(name)
         if lastPage:
-
-            resp = jsonify({"url": lastPage, "increment":home_config.get(name).get("page").get("increment")})
+            resp = jsonify(lastPage)
             resp.status_code = 200
             return resp
         else:

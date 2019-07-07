@@ -20,7 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from settings import routing_params, feed_params, browser_params, nanny_params
+from settings import feed_params, browser_params, nanny_params
 from src.main.exceptions import NextPageException
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 
@@ -38,20 +38,24 @@ class WebCrawler:
                                                                                                    submission_port=port)).text
         self.number_of_pages = None
         self.last_result = None
-        url = "http://{host}:{port}/wd/hub".format(host=browser_params["host"], port=port)
-        logging.debug("Starting remote webdriver ")
+        if browser_params.get("host") is None:
+            host = "worker-{port}:4444".format(port=port)
+        else:
+            host = browser_params.get("host")+":"+port
+        url = "http://{host}/wd/hub".format(host=host)
+        logging.debug("Starting remote webdriver")
         options = Options()
         options.add_argument("--headless")
-        self.startWebdriverSession(url, options)
+        self.startWebdriverSession(url, options, port)
         self.port = port
         logging.info('remote driver initiated'.format(url))
         self.driver.set_window_size(1020, 900)
         self.history = []
         self.page = 1
 
-    def startWebdriverSession(self, url, options, attempts=0):
+    def startWebdriverSession(self, url, options, port, attempts=0):
 
-        max_attempts = 10
+        max_attempts = 5
         try:
             attempts += 1
             self.driver = webdriver.Remote(command_executor=url,
@@ -62,9 +66,22 @@ class WebCrawler:
                 "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
             if attempts < max_attempts:
                 sleep(3)
-                self.startWebdriverSession(url, options, attempts)
+                self.startWebdriverSession(url, options, port, attempts)
             else:
                 raise e
+        except MaxRetryError as e:
+            logging.warning(
+                "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
+            if attempts < max_attempts:
+                r.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
+                sleep(3)
+                port = r.get(
+                    "http://{host}:{port}/{api_prefix}/getMainContainer/{submission_port}".format(**nanny_params,
+                                                                                                  submission_port=port)).text
+                self.startWebdriverSession(url, options, port, attempts)
+            else:
+                raise e
+
 
     def safelyClick(self, item, wait_for, selector, timeout=3):
         """
@@ -93,10 +110,12 @@ class WebCrawler:
             return False
 
     def resultPage(self):
-        if all(chunk in self.driver.current_url for chunk in feed_params['base_url']):
-            return True
-        else:
+        if feed_params['result_stub'] in self.driver.current_url:
             return False
+        elif feed_params['base_url'] not in self.driver.current_url:
+            return False
+        else:
+            return True
 
     def latestPage(self):
         try:
@@ -110,21 +129,24 @@ class WebCrawler:
             return True
 
     def nextPage(self, attempts=0):
-
         logging.info("attempt {}: going to next page from {}".format(attempts, self.driver.current_url))
         if not attempts > 0:
-            r.put("http://{host}:{port}/{api_prefix}/updateHistory/{name}".format(name=feed_params["name"],
-                                                                                  **routing_params),
-                  data=self.driver.current_url)
             self.page += 1
         while attempts < WebCrawlerConstants().max_attempts:
             try:
                 button = self.getNextButton()
+                logging.debug("found next button - text: {}".format(button.text))
                 button.click()
-
-                return
+                element_present = EC.presence_of_element_located((By.CSS_SELECTOR, feed_params['wait_for']))
+                try:
+                    WebDriverWait(self.driver, WebCrawlerConstants().click_timeout).until(element_present)
+                except:
+                    logging.info("page did not load as expected - timeout exception")
+                if not self.resultPage():
+                    raise NextPageException(self.page, "navigated to wrong page type")
             except AttributeError:
-                traceback.print_exc()
+                logging.warning("couldn't find next button trying again {} more times".format(
+                    attempts - WebCrawlerConstants().max_attempts))
                 attempts += 1
                 self.nextPage(attempts)
                 return
@@ -132,37 +154,33 @@ class WebCrawler:
                 raise NextPageException(self.page, e.msg)
         raise NextPageException(self.page, "maximum attempts reached")
 
-    def getNextButton(self, attempts=0) -> WebElement:
-        while attempts < WebCrawlerConstants().max_attempts:
-            buttons = self.driver.find_elements_by_xpath(feed_params['next_page_xpath'])
-            i = 0
-            for button in buttons:
-                i += 1
-                text = button.text
-                logging.debug("{} button text: {}".format(i, text))
-                if feed_params['next_button_text'].upper() in text.upper():
-                    return button
+    def getNextButton(self) -> WebElement:
+        buttons = self.driver.find_elements_by_xpath(feed_params['next_page_xpath'])
+        for button in buttons:
+            text = button.text.upper()
+            if feed_params['next_button_text'].upper() in text:
+                return button
+        logging.debug("couldn't find next button by xpath - found {} buttons".format(len(buttons)))
 
-            # 1st fallback is to use css
-            buttons = self.driver.find_elements_by_css_selector(feed_params.get("next_page_css"))
-            logging.debug("getting next page by css")
-            for button in buttons:
-                text = button.text.upper()
-                if feed_params.get("next_button_text").upper() in text:
-                    return button
-
-            # fallback 2, use beautiful soup and regex to find pagination bar
-            logging.debug("getting next page using bs4")
-            return self.driver.find_element_by_class_name(self.parseNextButton().attrs.get("class")[0])
+        # 1st fallback is to use css
+        buttons = self.driver.find_elements_by_css_selector(feed_params.get("next_page_css"))
+        for button in buttons:
+            text = button.text.upper()
+            if feed_params.get("next_button_text").upper() in text:
+                return button
+        logging.debug("couldn't find next button by css selector - found {} buttons".format(len(buttons)))
 
     def parseNextButton(self) -> Tag:
         item: Tag = bs4.BeautifulSoup(self.driver.page_source,
                                       features='html.parser').find(attrs={"class": re.compile('.*(?i)pagination.*')})
-        next = item.findAll(attrs={"class": re.compile('.*(?i)next.*')})
-        for item in next:
-            if feed_params['next_button_text'].upper() in item.text.upper():
-                logging.info("found button {}".format(item.text))
-                return item
+        try:
+            next = item.findAll(attrs={"class": re.compile('.*(?i)next.*')})
+            for item in next:
+                if feed_params['next_button_text'].upper() in item.text.upper():
+                    logging.info("found button {}".format(item.text))
+                    return item
+        except AttributeError:
+            logging.info("next button not found")
 
     def getResultList(self):
         start = time()

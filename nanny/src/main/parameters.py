@@ -11,43 +11,34 @@ from settings import mongo_params
 
 class ParameterManager:
     """
-    The ParameterManager controls the parameters. It delivers them to the client upon start up for use in
-    settings.py
+    The ParameterManager controls the parameters. It delivers them to the client.
 
     """
     client = pymongo.MongoClient(**mongo_params)
     feed_params: Database = client[os.getenv("PARAMETER_DATABASE", "params")]
 
-    def getParameter(self, feed_type, name=None):
-        if name is not None:
-            feed_type = self.feed_params[feed_type].find_one(filter={"name": name})
-        else:
-            feed_type = self.feed_params[feed_type].find_one(filter={"name": "stream_params"})
-        return feed_type["value"]
+    def getParameter(self, collection, name=None):
+        collection = self.feed_params[collection].find_one(filter={"name": name})
+        return collection
 
-    def setParameter(self, feed_type, value, name=None):
-        if name is not None:
-            param = self.feed_params[feed_type].find_one({"name": value["name"]})
-            if param is not None:
-                param["value"] = value
-                self.feed_params[feed_type].replace_one(filter={"name": name}, replacement={"name": name, "value": value})
-            else:
-                param = {"name": name, "value": value}
-                self.feed_params[feed_type].insert_one(param)
-        else:
-            self.feed_params[feed_type].insert_one({"name": "stream_params", "value": value})
+    def setParameter(self, collection, value, name=None):
 
+        param = self.feed_params[collection].find_one({"name": name})
+        value.update({"name": name})
+        if param is not None:
+            self.feed_params[collection].replace_one(filter={"name": name}, replacement=value)
+        else:
+            self.feed_params[collection].insert_one(value)
 
     def loadParams(self):
-        for feed_name in feeds:
-            self.setParameter(feed_type="results", value=feeds[feed_name], name=feed_name)
-        self.setParameter(value=stream_params, feed_type="stream_params")
-        self.setParameter(value=summary_feeds, feed_type="summary_feeds")
-        self.setParameter(value=objects, feed_type="mapper")
-        self.setParameter(value=home_config, feed_type="home_config")
+        files = os.listdir("./params")
+        for file in files:
+            with open(file) as f:
+                params = json.loads(f.read())
+            for param in params:
+                self.setParameter(name=param.get("name"), collection=file.split(".")[0], value=param)
 
     def exportParameters(self, notes):
-
         collections = self.feed_params.list_collection_names()
         if os.path.exists("./config/params"):
             old = "config/params_{}".format(datetime.now().strftime("%d%m%y-%H%M"))
@@ -69,7 +60,3 @@ class ParameterManager:
         with open("./config/params/notes.txt", "w") as file:
             file.write(notes)
         return os.listdir("./config/params")
-
-
-
-

@@ -1,13 +1,17 @@
 import bs4
+import requests
 from bs4 import Tag, NavigableString
 
-from settings import summary_feeds
+from settings import nanny_params
 
 
 class ResultParser:
 
     def __init__(self, feedName, source):
-        self.params = summary_feeds[feedName]
+        r = requests.get(
+            "https://{host}:{port}/parametercontroller/getParameter/summarizer/{name}".format(**nanny_params,
+                                                                                              name=feedName))
+        self.params = r.json()
         self.soup = bs4.BeautifulSoup(source, "html.parser")
 
     def parseResult(self):
@@ -34,7 +38,8 @@ class ResultParser:
                 # if this doesnt work get the children... eg a photo tag
                 finish = start.attrs[path['attr']]
             except:
-                finish = [node if isinstance(node, NavigableString) or node is None else node.attrs.get(path['attr']) for node in start.children]
+                finish = [node if isinstance(node, NavigableString) or node is None else node.attrs.get(path['attr'])
+                          for node in start.children]
         elif path['attr'] and not path['single']:
             for step in path['class'][:-1]:
                 start = start.findAll(attrs={"class": step})[0]
@@ -50,7 +55,8 @@ class ResultParser:
             for node in path["class"]:
                 start = start.find(attrs={"class": node})
             if start is not None:
-                finish = [node if isinstance(node, NavigableString) or node is None else node.text for node in start.children]
+                finish = [node if isinstance(node, NavigableString) or node is None else node.text for node in
+                          start.children]
             else:
                 finish = None
         return {item: finish}

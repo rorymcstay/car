@@ -9,10 +9,9 @@ nanny_params = {
     "params_manager": "parametercontroller"
 }
 
-stream_params = requests.get("http://{host}:{port}/{params_manager}/getParameter/stream_params".format(**nanny_params)).json()
-
 browser_params = {
-    "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal")
+    "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal"),
+    "base_port": os.getenv("SELENIUM_PORT", 4444)
 }
 
 

@@ -1,15 +1,12 @@
 import os
 
-import requests
 
 nanny_params = {
     "host": os.getenv("NANNY_HOST", "localhost"),
-    "port": os.getenv("FLASK_PORT"),
+    "port": os.getenv("FLASK_PORT", 5003),
     "api_prefix": "containercontroller",
     "params_manager": "parametercontroller"
 }
-
-summary_feeds = requests.get("http://{host}:{port}/parametercontroller/getParameter/summary_feeds".format(**nanny_params)).json()
 
 kafka_params = {
     "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],

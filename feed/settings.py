@@ -3,7 +3,7 @@ import os
 import requests
 
 kafka_params = {
-    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],
+    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS", "localhost:29092")],
 }
 
 hazelcast_params = {
@@ -12,9 +12,8 @@ hazelcast_params = {
 
 browser_params = {
     "port": os.getenv("BROWSER_PORT", 4444),
-    "host": os.getenv("BROWSER_CONTAINER_HOST", "localhost"),
+    "host": os.getenv("BROWSER_CONTAINER_HOST", None),
     "image": os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome:3.141.59')
-
 }
 
 routing_params = {
@@ -31,6 +30,6 @@ nanny_params = {
 }
 
 
-params = requests.get("http://{host}:{port}/{params_manager}/getParameter/{name}/results".format(**nanny_params, name=os.getenv("NAME")))
+params = requests.get("http://{host}:{port}/{params_manager}/getParameter/feed/{name}".format(**nanny_params, name=os.getenv("NAME")))
 
 feed_params = params.json()

@@ -36,12 +36,8 @@ class FeedManager:
         self.webCrawler = WebCrawler()
 
     def renewWebCrawler(self):
-        self.webCrawler.quit()
+        logging.info("renewing webcrawler")
         self.webCrawler = WebCrawler()
-        last = r.get(
-            "http://{host}:{port}/{api_prefix}/getLastPage/{name}".format(**routing_params, **feed_params))
-        logging.info("navigating to latest page {}".format(last))
-        self.webCrawler.driver.get(last.json()["url"])
 
     def goHome(self):
         """
@@ -58,13 +54,14 @@ class FeedManager:
                                                     sort=self.sort)),
                          headers={"content-type": "application/json"})
             url = home.text
-        elif "PAGE" in home.json()["url"]:
+        elif feed_params["page_url_param"].upper() in home.json()["url"].upper():
             data = home.json()
             url = str(data["url"])
             split = url.split("=")
             for (num, l) in enumerate(split):
-                if "page" in l.lower():
-                    self.webCrawler.page = int("".join(itertools.takewhile(str.isdigit, split[num + 1])))/int(data["increment"])
+                if feed_params["page_url_param"].lower() in l.lower():
+                    parsed = "".join(itertools.takewhile(str.isdigit, split[num + 1]))
+                    self.webCrawler.page = int(int(parsed)/int(data["increment"]))
                     break
         else:
             data = home.json()
