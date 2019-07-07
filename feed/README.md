@@ -42,3 +42,5 @@ the docker-compose configuration.
 ## Request mechanism
 You have to ask it for data items. It checks the cache
 A request module which accepts requests and forwards it to server
+
+brew switch python 3.7.0

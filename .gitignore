@@ -2,3 +2,15 @@
 */out
 *.log
 */*.iml
+*.iml
+python36
+python37
+.DS_Store
+config
+feed_platform
+.idea
+test-project
+venv
+config
+params
+

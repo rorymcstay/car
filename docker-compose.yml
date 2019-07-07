@@ -2,39 +2,89 @@ version: '2'
 
 services:
 
-  mongo:
-    image: mongo
-    container_name: mongo
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
-    command: mongod
-
-  mongo-express:
-    image: mongo-express
-    container_name: mongo-express
-    restart: always
-    depends_on:
-      - mongo
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: root
-      ME_CONFIG_MONGODB_ADMINPASSWORD: root
-
-  car-feed:
-    image: car-feed
-    container_name: car-feed
-    build: "./car-feed"
+  donedeal:
+    container_name: donedeal
+    build: ./feed
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - mongo
-    ports:
-      - "5001:5001"
+      - router
+      - nanny
+    stop_grace_period: 5s
+    environment:
+      NAME: donedeal
+      BROWSER_PORT: 4000
     env_file:
-      - car-feed/docker.properties.env
-    stop_grace_period: 5m
+      - feed_platform/docker.env
+
+  pistonheads:
+    container_name: pistonheads
+    build: ./feed
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+    - router
+    - nanny
+    stop_grace_period: 5s
+    environment:
+      NAME: pistonheads
+      BROWSER_PORT: 6000
+    env_file:
+    - feed_platform/docker.env
+
+  worker:
+    build: ./worker
+    volumes:
+    - /var/run/docker.docker:/sock/var/run.sock
+    depends_on:
+    - nanny
+    stop_grace_period: 5s
+    env_file:
+    - feed_platform/docker.env
+
+  router:
+    container_name: router
+    build: ./routing
+    ports:
+    - "5002:5000"
+    stop_grace_period: 5s
+    env_file:
+      - feed_platform/docker.env
+
+  nanny:
+    container_name: nanny
+    build: ./nanny
+    volumes:
+    - ./config:/home/config
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - "5003:5000"
+    environment:
+      BROWSER_BASE_PORT: 4444
+    stop_grace_period: 5s
+    env_file:
+      - feed_platform/docker.env
+
+  summarizer:
+    container_name: summarizer
+    build: ./summarizer
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - "5004:5000"
+    stop_grace_period: 5s
+    env_file:
+    - feed_platform/docker.env
+
+  mapper:
+    container_name: mapper
+    build: ./mapper
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+    - "5005:5000"
+    stop_grace_period: 5s
+    env_file:
+    - feed_platform/docker.env
+
+

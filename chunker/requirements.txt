@@ -1,0 +1,6 @@
+kafka-python
+hazelcast-python-client
+python-dotenv
+beautifulsoup4
+slimit
+requests

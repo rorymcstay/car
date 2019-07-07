@@ -156,5 +156,14 @@ class Car(object):
 
     def getCarDetails(self) -> CarDetails:
         return self.carDetails
+    
+class Result:
+
+    def __init__(self, items):
+
+        self.items = items
+
+    def __dict__(self):
+        return self.items
 
 

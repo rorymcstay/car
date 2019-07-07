@@ -1,0 +1,8 @@
+hazelcast-python-client
+flask
+flask-classy
+requests
+python-dotenv
+docker
+pymongo
+checksumdir

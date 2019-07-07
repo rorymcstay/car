@@ -1,0 +1,91 @@
+version: '2'
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    restart: always
+    ports:
+    - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    command: mongod
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
+    depends_on:
+    - mongo
+    ports:
+    - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOOKEEPER_TICK_TIME=2000
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+     - '9092:9092'
+     - '29092:29092'
+    links:
+      - zookeeper:zk
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CREATE_TOPICS="donedeal-results;donedeal-items;pistonheads-items;pistonheads-results;worker-queue"
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    # hazelcast imdg
+  hazelcast:
+    image: hazelcast/hazelcast
+    container_name: hazelcast
+    volumes:
+    - ./feed_platform:/configFolder
+    environment:
+    - JAVA_OPTS=-Dhazelcast.config=/configFolder/hazelcast.xml -Dhazelcast.mancenter.url=http://cache-manager:8080/hazelcast-mancenter -Dgroup.name=dev -Dgroup.password=dev-pass
+    ports:
+    - 5701:5701
+    links:
+    - management-center:mancenter
+
+    #management center
+  management-center:
+    image: hazelcast/management-center
+    container_name: cache-manager
+    # persisting mancenter users db folder to local disk
+    volumes:
+    - ~/mancenter3.8:/mancenter-3.8
+    environment:
+    - MANCENTER_DATA=/mancenter-3.8
+    # enable REST interface on management center
+    # http://docs.hazelcast.org/docs/latest-development/manual/html/Management/Clustered_REST_via_Management_Center.html
+    - JAVA_OPTS=-Dhazelcast.mc.rest.enabled=true
+    ports:
+    - 8080:8080
+  jupyter:
+    container_name: jupyter
+    build: ./learning
+    volumes:
+      - ./learning/notebooks:/home/notebooks
+    ports:
+      - "8888:8888"
+    env_file:
+      - feed_platform/docker.env
+

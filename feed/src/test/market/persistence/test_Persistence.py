@@ -1,7 +1,7 @@
-import time
 import unittest
 from unittest import TestCase
 
+import time
 from market.Worker import Worker
 from resources.donedeal_market import market
 
@@ -13,8 +13,8 @@ class TestPersistence(TestCase):
         market.webCrawler.update_latest_page()
         latest = market.webCrawler.last_result
         market.workers = [Worker(i, market) for i in range(1)]
-        market.workers[0].webCrawler.driver.get(market.webCrawler.get_result_array()[7])
-        market.workers[1].webCrawler.driver.get(market.webCrawler.get_result_array()[9])
+        market.workers[0].webCrawler.driver.get(market.webCrawler.getResultList()[7])
+        market.workers[1].webCrawler.driver.get(market.webCrawler.getResultList()[9])
 
         '''Go back two pages before we save progress'''
         market.webCrawler.driver.back()
