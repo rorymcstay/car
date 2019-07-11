@@ -1,6 +1,7 @@
 hazelcast-python-client
 flask
 flask-classy
+flask-cors
 requests
 python-dotenv
 docker

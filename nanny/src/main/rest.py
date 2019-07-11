@@ -43,13 +43,15 @@ class ParameterController(FlaskView):
     @route("/getParameter/<string:collection>/<string:name>")
     def getParameter(self, collection, name):
         params: dict = self.parameterManager.getParameter(name=name, collection=collection)
+        if params is None:
+            return Response(status=404)
         params.pop("_id")
         return Response(json.dumps(params), mimetype="application/json")
 
-    @route("/setParameter/<string:name>/<string:feed>", methods=["PUT"])
-    def setParameter(self, name, feed):
+    @route("/setParameter/<string:collection>/<string:name>", methods=["PUT"])
+    def setParameter(self, name, collection):
         value=request.get_json()
-        self.parameterManager.setParameter(name=name, collection=feed, value=value)
+        self.parameterManager.setParameter(name=name, collection=collection, value=value)
         return "ok"
 
     # TODO load params from config/params directory of specified date

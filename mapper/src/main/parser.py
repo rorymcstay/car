@@ -51,8 +51,8 @@ class ObjectParser:
 
     def normalizeJson(self, rawJson):
         item = {}
-        for name in self.params["attrs"]:
+        for value in self.params["attrs"]:
             for val in rawJson:
-                v = find(self.params["attrs"][name], val)
-                item.update({name: list(v)})
+                v = find(value["field"], val)
+                item.update({value["name"]: list(v)})
         return item
