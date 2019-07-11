@@ -16,7 +16,7 @@ browser_params = {
 
 
 kafka_params = {
-    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],
+    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS", "localhost:29092")],
 }
 
 pistonheads= {

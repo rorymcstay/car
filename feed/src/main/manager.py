@@ -58,11 +58,14 @@ class FeedManager:
             data = home.json()
             url = str(data["url"])
             split = url.split("=")
-            for (num, l) in enumerate(split):
-                if feed_params["page_url_param"].lower() in l.lower():
-                    parsed = "".join(itertools.takewhile(str.isdigit, split[num + 1]))
-                    self.webCrawler.page = int(int(parsed)/int(data["increment"]))
-                    break
+            try:
+                for (num, l) in enumerate(split):
+                    if feed_params["page_url_param"].lower() in l.lower():
+                        parsed = "".join(itertools.takewhile(str.isdigit, split[num + 1]))
+                        self.webCrawler.page = int(int(parsed)/int(data["increment"]))
+                        break
+            except ValueError as e:
+                self.webCrawler.page = 0
         else:
             data = home.json()
             url = str(data["url"])

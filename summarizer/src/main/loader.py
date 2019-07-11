@@ -12,7 +12,7 @@ from src.main.parser import ResultParser
 
 class ResultLoader():
 
-    markets = ["{feed}-results".format(feed=name) for name in os.getenv("FEEDS").split(";")]
+    markets = ["{feed}-results".format(feed=name) for name in os.getenv("FEEDS", "donedeal;pistonheads").split(";")]
     cacheManager = CacheManager()
     kafkaConsumer = KafkaConsumer(**kafka_params)
     producer = KafkaProducer(**kafka_params, value_serializer=lambda v: json.dumps(v).encode('utf-8'))

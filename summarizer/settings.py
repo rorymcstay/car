@@ -9,9 +9,9 @@ nanny_params = {
 }
 
 kafka_params = {
-    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS")],
+    "bootstrap_servers": [os.getenv("KAFKA_ADDRESS", "localhost:29092")],
 }
 
 hazelcast_params = {
-    "host": os.getenv("HAZELCAST_HOST"), "port": os.getenv("HAZELCAST_PORT", 5701)
+    "host": os.getenv("HAZELCAST_HOST", "localhost"), "port": os.getenv("HAZELCAST_PORT", 5701)
 }

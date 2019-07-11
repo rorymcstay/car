@@ -81,8 +81,12 @@ class Worker:
             else:
                 raise e
         except MaxRetryError as e:
-            requests.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
-            self.startWebdriverSession(url, port, attempts)
+            attempts += 1
+            if attempts < max_attempts:
+                requests.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
+                self.startWebdriverSession(url, port, attempts)
+            else:
+                raise e
 
     def publishObject(self, url, streamName):
         """

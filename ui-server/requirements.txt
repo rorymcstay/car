@@ -1,14 +1,5 @@
-pyfiglet
-numpy
 requests
 flask
 flask-classy
-bson
-selenium
-pymongo
-slimit
-beautifulsoup4
-elasticsearch
-pyyaml
-docker
-influxdb
+hazelcast-python-client
+flask-cors
