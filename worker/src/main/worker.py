@@ -83,7 +83,7 @@ class Worker:
         except MaxRetryError as e:
             attempts += 1
             if attempts < max_attempts:
-                requests.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
+                requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{}".format(port, **nanny_params))
                 self.startWebdriverSession(url, port, attempts)
             else:
                 raise e
@@ -98,52 +98,44 @@ class Worker:
         r = requests.get("http://{host}:{port}/parametercontroller/getParameter/worker/{name}".format(**nanny_params,
                                                                                                     name=streamName))
         stream = r.json()
-        try:
-            webTime = time()
-            self.driver.get(url)
-            logging.info(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,
-                                                                        time_elapsed=time() - webTime))
-            element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
-            WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
-            parser = bs4.BeautifulSoup(self.driver.page_source, features="html.parser")
-            if stream.get("single"):
-                if stream.get("class") is None:
-                    message = bytes(self.driver.page_source, "utf-8")
-                else:
-                    message = bytes(str(parser.find(attrs={"class": stream.get("class")})), 'utf-8')
-                self.producer.send(topic="{name}-items".format(name=streamName),
-                                   value=message,
-                                   key=bytes(self.driver.current_url, 'utf-8'))
-                logging.info("published result to kafka")
+        webTime = time()
+        self.driver.get(url)
+        logging.info(msg="{url} loaded in: {time_elapsed} s".format(url=self.driver.current_url,
+                                                                    time_elapsed=time() - webTime))
+        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, stream['page_ready']))
+        WebDriverWait(self.driver, int(os.getenv("WORKER_TIMEOUT"))).until(element_present)
+        parser = bs4.BeautifulSoup(self.driver.page_source, features="html.parser")
+        if stream.get("single"):
+            if stream.get("class") is None:
+                message = bytes(self.driver.page_source, "utf-8")
             else:
-                items = parser.findAll(attrs={"class": stream.get("class")})
-                i = 0
-                for item in items:
-                    i += 1
-                    payload = dict(value=bytes(str(item), 'utf-8'),
-                                   key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8'))
-                    self.producer.send(topic="{name}-items".format(name=streamName), **payload)
-                logging.info("published result to kafka")
-
-        except WebDriverException:
-            logging.error("webdriver exception")
-            traceback.print_exc()
-            requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{req_port}".format(req_port=self.port, **nanny_params))
-            self.__init__()
+                message = bytes(str(parser.find(attrs={"class": stream.get("class")})), 'utf-8')
+            self.producer.send(topic="{name}-items".format(name=streamName),
+                               value=message,
+                               key=bytes(self.driver.current_url, 'utf-8'))
+            logging.info("published result to kafka")
+        else:
+            items = parser.findAll(attrs={"class": stream.get("class")})
+            i = 0
+            for item in items:
+                i += 1
+                payload = dict(value=bytes(str(item), 'utf-8'),
+                               key=bytes("{}_{}".format(self.driver.current_url, i), 'utf-8'))
+                self.producer.send(topic="{name}-items".format(name=streamName), **payload)
+            logging.info("published result to kafka")
 
     def main(self):
         killer = GracefulKiller()
         self.consumer.subscribe(["worker-queue"])
-        while 1:
-            item: ConsumerRecord
-            try:
+        try:
+            while 1:
+                item: ConsumerRecord
                 for item in self.consumer:
                     self.publishObject(url=item.value["url"], streamName=item.value["type"])
                     if killer.kill_now:
                         requests.get(
                             "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
                         self.consumer.close()
-            except Exception:
-                requests.get(
-                    "http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))
-                self.consumer.close()
+        except Exception as e:
+            traceback.print_exc()
+            requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{close_port}".format(close_port=self.port, **nanny_params))

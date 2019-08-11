@@ -65,6 +65,16 @@ services:
     env_file:
       - feed_platform/docker.env
 
+  ui-server:
+    container_name: ui-server
+    build: ./ui-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "5004:5000"
+    env_file:
+      - feed_platform/docker.env
+
   summarizer:
     container_name: summarizer
     build: ./summarizer
@@ -79,10 +89,6 @@ services:
     build: ./mapper
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-    - "5005:5000"
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env
-
-

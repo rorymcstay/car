@@ -24,14 +24,14 @@ class ParameterManager:
     def setParameter(self, collection, value, name=None):
         param = self.feed_params[collection].find_one({"name": name})
         value.update({"name": name})
-        value.pop("meta")
-        old = value.pop("value")
+        old = param
         if param is not None:
             self.feed_params[collection].replace_one(filter={"name": name}, replacement=value)
+            old["name"] = "{}_{}".format(name, datetime.now().strftime("%d%m%Y"))
+            self.feed_params[collection].insert(old)
         else:
             self.feed_params[collection].insert_one(value)
-        old["name"] = "{}_{}".format(name, datetime.now().strftime("%d%m%Y"))
-        self.feed_params[collection].insert(old)
+
 
     def loadParams(self):
         files = os.listdir("./params")

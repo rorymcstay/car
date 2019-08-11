@@ -1,5 +1,8 @@
+pymongo
+apscheduler
 requests
 flask
 flask-classy
 hazelcast-python-client
 flask-cors
+kafka-python

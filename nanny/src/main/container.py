@@ -46,7 +46,7 @@ class Container(Portable):
         return self.CLASS_ID
 
     def __str__(self):
-        return "Container {} is {} and ".format(self.port,
+        return "Container {} is {} and {}".format(self.port,
                                            "active" if self.active.upper() == "yes".upper() else "not active", self.status)
 
     def __eq__(self, other):
@@ -123,9 +123,11 @@ class ContainerManager:
                                                          detach=True,
                                                          name='worker-{}'.format(port),
                                                          ports={'4444/tcp': port}, network=os.getenv("NETWORK", "car_default"))
+                    workerPorts.replace(key=port,
+                                        value=Container(port=port, active="yes", status=browser.status)).result()
                 else:
                     return str(port)
-            logging.info(msg='starting_browser named worker-{port}'.format(port=port))
+            logging.info(msg='started browser named worker-{port}'.format(port=port))
             self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
             return str(port)
 
@@ -141,6 +143,7 @@ class ContainerManager:
         try:
             browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
             browser.kill()
+            browser.remove()
         except APIError as e:
             logging.info("couldn't kill container {} - {}".format(e.explanation, e.status_code))
         # TODO handle restarting container here - test that you can use a container after running for some time

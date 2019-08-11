@@ -7,3 +7,4 @@ python-dotenv
 docker
 pymongo
 checksumdir
+kafka-python
