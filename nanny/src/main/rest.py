@@ -48,19 +48,7 @@ class ParameterController(FlaskView):
         params.pop("_id")
         return Response(json.dumps(params), mimetype="application/json")
 
-    @route("/setParameter/<string:collection>/<string:name>", methods=["PUT"])
-    def setParameter(self, name, collection):
-        value=request.get_json()
-        self.parameterManager.setParameter(name=name, collection=collection, value=value)
-        return "ok"
-
-    # TODO load params from config/params directory of specified date
-    @route("/loadParams")
-    def loadParams(self):
-        self.parameterManager.loadParams()
-        return "ok"
-
-    @route("/exportParameters")
-    def saveParameters(self):
-        notes = str(request.data)
-        return json.dumps(self.parameterManager.exportParameters(notes))
+    @route("/reportParameter/<string:collection>/<string:name>")
+    def reportParameter(self, collection, name):
+        r = request.data
+        return self.parameterManager.reportParam(collection, name, r)

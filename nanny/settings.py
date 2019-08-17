@@ -16,7 +16,6 @@ mongo_params = {
     "serverSelectionTimeoutMS": 5
 }
 
-
 kafka_params = {
     "bootstrap_servers": [os.getenv("KAFKA_ADDRESS", "localhost:29092")],
 }

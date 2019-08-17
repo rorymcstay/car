@@ -14,3 +14,7 @@ mongo_params = {
     "password": os.getenv("MONGO_PASS", "root"),
     "serverSelectionTimeoutMS": 5
 }
+feed_params = {
+    "image": "car_feed",
+    "success": "feed has started"
+}

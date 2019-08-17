@@ -11,10 +11,10 @@ logging.FileHandler('/var/tmp/myapp.log')
 
 
 app = Flask(__name__)
-CORS(app)
 ContainerController.register(app)
 ParameterController.register(app)
+CORS(app)
 
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(port=os.getenv("FLASK_HOST", 5003), host="0.0.0.0")
+    app.run(port=os.getenv("FLASK_HOST", 5000), host="0.0.0.0")

@@ -11,6 +11,8 @@ COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
 COPY app.py ./app.py
 
+RUN python -m pip install pip
+
 # Installing packages
 RUN pip install -r ./requirements.txt
 

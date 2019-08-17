@@ -11,6 +11,7 @@ COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
 COPY ui-server.py ./app.py
 
+RUN python -m pip install pip
 # Installing packages
 RUN pip install -r ./requirements.txt
 

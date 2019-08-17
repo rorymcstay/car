@@ -81,6 +81,7 @@ class WebCrawler:
                 self.startWebdriverSession(url, options, port, attempts)
             else:
                 raise e
+        logging.info("started webdriver session")
 
     def safelyClick(self, item, wait_for, selector, timeout=3):
         """

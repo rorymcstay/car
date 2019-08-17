@@ -2,7 +2,7 @@ version: '2'
 
 services:
 
-  donedeal:
+  feed:
     container_name: donedeal
     build: ./feed
     volumes:
@@ -11,26 +11,8 @@ services:
       - router
       - nanny
     stop_grace_period: 5s
-    environment:
-      NAME: donedeal
-      BROWSER_PORT: 4000
     env_file:
       - feed_platform/docker.env
-
-  pistonheads:
-    container_name: pistonheads
-    build: ./feed
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-    depends_on:
-    - router
-    - nanny
-    stop_grace_period: 5s
-    environment:
-      NAME: pistonheads
-      BROWSER_PORT: 6000
-    env_file:
-    - feed_platform/docker.env
 
   worker:
     build: ./worker

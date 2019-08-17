@@ -14,6 +14,8 @@ from src.main.exceptions import NextPageException
 from src.main.manager import FeedManager
 from src.main.market.utils.WebCrawlerConstants import WebCrawlerConstants
 
+start = logging.getLogger("startup")
+
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 logging.FileHandler('/var/tmp/myapp.log')
 logging.getLogger("requests").setLevel(logging.WARNING)
@@ -37,6 +39,7 @@ market: FeedManager = FeedManager()
 market.setHome(make="BMW", model="3-Series", sort="newest")
 if __name__ == '__main__':
     killer = GracefulKiller()
+    start.warning("feed has started")
     while True:
         timeStart = time()
         try:
