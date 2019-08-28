@@ -48,6 +48,11 @@ class ParameterController(FlaskView):
         params.pop("_id")
         return Response(json.dumps(params), mimetype="application/json")
 
+    def getFeeds(self):
+        feeds = [feed.get('name') for feed in self.parameterManager.feed_params['feed'].find({})]
+        res = Response(json.dumps(feeds), mimetype='application/json')
+        return res
+
     @route("/reportParameter/<string:collection>/<string:name>")
     def reportParameter(self, collection, name):
         r = request.data

@@ -15,3 +15,11 @@ kafka_params = {
 hazelcast_params = {
     "host": os.getenv("HAZELCAST_HOST", "localhost"), "port": os.getenv("HAZELCAST_PORT", 5701)
 }
+
+database_parameters = {
+    "host": os.getenv("DATABSE_HOST", "localhost"),
+    "port": os.getenv("DATABASE_PORT", 5432),
+    "database": "postgres",
+    "user": "postgres",
+    "password": "postgres"
+}

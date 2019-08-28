@@ -74,7 +74,7 @@ class FeedManager:
         logging.info("navigated to {} ok".format(url))
         return home
 
-    def setHome(self, make=None, model=None, sort=None):
+    def setHome(self, make=None, model=None, sort='newest'):
         self.make = make
         self.model = model
         self.sort = sort

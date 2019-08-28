@@ -4,13 +4,13 @@ import requests
 
 nanny_params = {
     "host": os.getenv("NANNY_HOST", "localhost"),
-    "port": os.getenv("FLASK_PORT"),
+    "port": os.getenv("FLASK_PORT", 5003),
     "api_prefix": "containercontroller",
     "params_manager": "parametercontroller"
 }
 
 browser_params = {
-    "host": os.getenv("BROWSER_CONTAINER_HOST", "host.docker.internal"),
+    "host": os.getenv("BROWSER_CONTAINER_HOST", None),
     "base_port": os.getenv("SELENIUM_PORT", 4444)
 }
 

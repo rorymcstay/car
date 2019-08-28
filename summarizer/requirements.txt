@@ -1,3 +1,4 @@
+sqlalchemy
 kafka-python
 hazelcast-python-client
 beautifulsoup4

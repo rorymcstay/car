@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime
+from typing import Optional, Any
+
 from time import time
 
 import docker
@@ -12,7 +14,7 @@ import json
 import os
 
 from flask import Response, request
-from flask_classy import FlaskView
+from flask_classy import FlaskView, route
 
 import pymongo
 from pymongo.database import Database
@@ -25,10 +27,12 @@ class FeedManager(FlaskView):
     mongoClient = pymongo.MongoClient(**mongo_params)
     forms: Database = mongoClient[os.getenv("FORM_DATABASE", "forms")]
     feeds: Database = mongoClient[os.getenv("PARAMETER_DATABASE", "params")]
+    parameter_stats: Database = mongoClient[os.getenv("PARAM_STATS_DATABASE", "params_stats")]
     parameterSchemas = forms['parameterSchemas']
     admin = KafkaAdminClient(**kafka_params)
     kafkaClient = SimpleClient(hosts=kafka_params.get("bootstrap_servers")[0])
     feed_params: Database = mongoClient[os.getenv("PARAMETER_DATABASE", "params")]
+    feed_ports = {name.get("name"): 8000+i for (i, name) in enumerate(feeds["feed"].find({}))}
 
     def getParameter(self, collection, name):
         params = self.feed_params[collection].find_one(filter={"name": name})
@@ -36,6 +40,18 @@ class FeedManager(FlaskView):
             return Response(status=404)
         params.pop("_id")
         return Response(json.dumps(params), mimetype="application/json")
+
+    def getParameterStatus(self, feedName):
+        c = self.parameterSchemas.find({})
+        payload = []
+        for parameterName in [param.get("name") for param in c]:
+            errors = self.parameter_stats[parameterName].count({"name": feedName})
+            status = {
+                "errors": errors,
+                "name": parameterName
+            }
+            payload.append(status)
+        return Response(json.dumps(payload), mimetype='application/json')
 
     def getParameterTypes(self):
         c = self.parameterSchemas.find({})
@@ -48,17 +64,20 @@ class FeedManager(FlaskView):
         val = parameter['value']
         return Response(json.dumps(val), mimetype="application/json")
 
+    @route("/setParameter/<string:collection>/<string:name>", methods=['PUT'])
     def setParameter(self, collection, name=None):
         value = request.get_json()
-        param = self.feed_params[collection].find_one({"name": name})
+        param: dict = self.feed_params[collection].find_one({"name": name})
         value.update({"name": name})
         old = param
         if param is not None:
             self.feed_params[collection].replace_one(filter={"name": name}, replacement=value)
             old["name"] = "{}_{}".format(name, datetime.now().strftime("%d%m%Y"))
+            old.pop("_id")
             self.feed_params[collection].insert(old)
         else:
             self.feed_params[collection].insert_one(value)
+        return Response("ok", status=200)
 
     def getFeeds(self):
         c = self.feeds["feed"].find({})
@@ -66,6 +85,8 @@ class FeedManager(FlaskView):
         return Response(json.dumps(data), mimetype="application/json")
 
     def newFeed(self, feedName):
+        port = len(self.feed_ports)
+        self.feed_ports.update({feedName: 8000 + port})
         c = self.feeds["feed"].find({"name": feedName})
         if any(val == feedName for val in c):
             pass
@@ -103,7 +124,8 @@ class FeedManager(FlaskView):
 
                 image = self.dockerClient.images.get(feed_params['image'])
                 feed: Container = self.dockerClient.containers.run(image,
-                                                                   environment=["NAME={}".format(feedName)] + env_vars,
+                                                                   environment=["NAME={}".format(feedName),
+                                                                                'BROWSER_PORT={}'.format(self.feed_ports.get(feedName))] + env_vars,
                                                                    detach=True,
                                                                    name=feedName,
                                                                    restart_policy={"Name": 'always'},

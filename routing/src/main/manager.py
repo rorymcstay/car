@@ -14,7 +14,7 @@ class RoutingManager(object):
     config = ClientConfig()
     config.network_config.addresses.append("{host}:{port}".format(**hazelcast_params))
     hz = HazelcastClient(config)
-    names = os.getenv("FEEDS").split(";")
+    names = requests.get("http://{host}:{port}/parametercontroller/getFeeds/".format(**nanny_params)).json()
     home_config = {}
     for name in names:
         home_config.update({
@@ -35,7 +35,11 @@ class RoutingManager(object):
             if "PAGE" in substring.upper() and page is None:
                 continue
             url = url + substring
-        url = url.format(make=make, model=model, page=page, sort=self.home_config[name].get("sort_first")[sort])
+        if self.home_config[name].get("sort_first"):
+            sort = self.home_config[name].get("sort_first")[sort]
+        else:
+            sort = None
+        url = url.format(make=make, model=model, page=page, sort=sort)
         return url
 
     def updateHistory(self, name, value):

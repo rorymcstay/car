@@ -1,6 +1,8 @@
 import logging
 import os
 import signal
+import sys
+
 from time import time, sleep
 
 import requests
@@ -36,7 +38,7 @@ class GracefulKiller:
 
 
 market: FeedManager = FeedManager()
-market.setHome(make="BMW", model="3-Series", sort="newest")
+market.setHome()
 if __name__ == '__main__':
     killer = GracefulKiller()
     start.warning("feed has started")
@@ -58,7 +60,6 @@ if __name__ == '__main__':
                 try:
                     market.webCrawler.driver.get(nextPage.text)
                 except TimeoutException:
-                    market.renewWebCrawler()
                     market.webCrawler.driver.get(nextPage.text)
                 try:
                     element_present = EC.presence_of_element_located((By.CSS_SELECTOR, feed_params['wait_for']))
@@ -81,5 +82,6 @@ if __name__ == '__main__':
         if killer.kill_now:
             market.webCrawler.driver.close()
             requests.get(
-                "https://{host}:{port}/{api_prefix}/freeContainer/{free_port}".format(free_port=market.webCrawler.port,
+                "http://{host}:{port}/{api_prefix}/freeContainer/{free_port}".format(free_port=market.webCrawler.port,
                                                                                       **nanny_params))
+            sys.exit()

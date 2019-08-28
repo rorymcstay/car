@@ -1,4 +1,5 @@
 import logging as log
+import os
 import re
 import traceback
 from http.client import RemoteDisconnected
@@ -41,7 +42,7 @@ class WebCrawler:
         if browser_params.get("host") is None:
             host = "worker-{port}:4444".format(port=port)
         else:
-            host = browser_params.get("host")+":"+port
+            host = browser_params.get("host") + ":" + port
         url = "http://{host}/wd/hub".format(host=host)
         logging.debug("Starting remote webdriver")
         options = Options()
@@ -55,32 +56,39 @@ class WebCrawler:
 
     def startWebdriverSession(self, url, options, port, attempts=0):
 
-        max_attempts = 5
+        max_attempts = 10
+        attempts += 1
         try:
-            attempts += 1
             self.driver = webdriver.Remote(command_executor=url,
                                            desired_capabilities=DesiredCapabilities.CHROME,
                                            options=options)
-        except (RemoteDisconnected, ProtocolError) as e:
+
+        except (RemoteDisconnected, ProtocolError, MaxRetryError) as e:
             logging.warning(
-                "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
+                "failed to communicate with selenium at {}, trying again for {} more times".format(url, max_attempts - attempts))
             if attempts < max_attempts:
-                sleep(3)
                 self.startWebdriverSession(url, options, port, attempts)
+                sleep(3)
             else:
-                raise e
-        except MaxRetryError as e:
-            logging.warning(
-                "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
-            if attempts < max_attempts:
-                r.get("http://{host}:{port}/{api_prefix}/cleanUpContainer/{}".format(port, **nanny_params))
+                r.get("http://{host}:{port}/{api_prefix}/freeContainer/{}".format(port, **nanny_params))
                 sleep(3)
                 port = r.get(
                     "http://{host}:{port}/{api_prefix}/getMainContainer/{submission_port}".format(**nanny_params,
                                                                                                   submission_port=port)).text
-                self.startWebdriverSession(url, options, port, attempts)
+                self.startWebdriverSession(url, options, port)
+        except MaxRetryError as e:
+            logging.warning(
+                "failed to communicate with selenium at {}, trying again for {} more times".format(url, max_attempts - attempts))
+            if attempts < max_attempts:
+                self.startWebdriverSession(url, options, port,attempts)
+                sleep(3)
             else:
-                raise e
+                r.get("http://{host}:{port}/{api_prefix}/freeContainer/{}".format(port, **nanny_params))
+                sleep(3)
+                port = r.get(
+                    "http://{host}:{port}/{api_prefix}/getMainContainer/{submission_port}".format(**nanny_params,
+                                                                                                  submission_port=port)).text
+                self.startWebdriverSession(url, options, port)
         logging.info("started webdriver session")
 
     def safelyClick(self, item, wait_for, selector, timeout=3):
@@ -104,6 +112,7 @@ class WebCrawler:
             traceback.print_exc()
             return False
         except WebDriverException:
+
             traceback.print_exc()
             item = self.driver.find_element_by_css_selector(feed_params["next_page_css"])
             item.click()
@@ -113,6 +122,7 @@ class WebCrawler:
         if feed_params['result_stub'] in self.driver.current_url:
             return False
         elif feed_params['base_url'] not in self.driver.current_url:
+            reportParameter('base_url')
             return False
         else:
             return True
@@ -135,16 +145,17 @@ class WebCrawler:
         while attempts < WebCrawlerConstants().max_attempts:
             try:
                 button = self.getNextButton()
-                logging.debug("found next button - text: {}".format(button.text))
                 button.click()
                 element_present = EC.presence_of_element_located((By.CSS_SELECTOR, feed_params['wait_for']))
                 try:
                     WebDriverWait(self.driver, WebCrawlerConstants().click_timeout).until(element_present)
                 except:
+                    reportParameter(parameter_key='wait_for')
                     logging.info("page did not load as expected - timeout exception")
                 if not self.resultPage():
                     raise NextPageException(self.page, "navigated to wrong page type")
             except AttributeError:
+
                 logging.warning("couldn't find next button trying again {} more times".format(
                     attempts - WebCrawlerConstants().max_attempts))
                 attempts += 1
@@ -161,7 +172,7 @@ class WebCrawler:
             if feed_params['next_button_text'].upper() in text:
                 return button
         logging.debug("couldn't find next button by xpath - found {} buttons".format(len(buttons)))
-
+        reportParameter('next_page_xpath')
         # 1st fallback is to use css
         buttons = self.driver.find_elements_by_css_selector(feed_params.get("next_page_css"))
         for button in buttons:
@@ -169,6 +180,7 @@ class WebCrawler:
             if feed_params.get("next_button_text").upper() in text:
                 return button
         logging.debug("couldn't find next button by css selector - found {} buttons".format(len(buttons)))
+        reportParameter("next_page_css")
 
     def parseNextButton(self) -> Tag:
         item: Tag = bs4.BeautifulSoup(self.driver.page_source,
@@ -213,3 +225,13 @@ class WebCrawler:
             self.driver.quit()
         except MaxRetryError as e:
             logging.error("Tried to close browser when it was not running.")
+
+
+def reportParameter(parameter_key=None):
+    endpoint = "http://{host}:{port}/parametermanager/{}/{}/{}".format(
+        os.getenv("NAME"),
+        parameter_key,
+        "feed",
+        **nanny_params
+    )
+    r.get(endpoint)

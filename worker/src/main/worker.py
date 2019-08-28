@@ -58,35 +58,51 @@ class Worker:
         """
 
         port = requests.get("http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params)).text
-        url = "http://worker-{port}:{base}/wd/hub".format(port=port, base=browser_params["base_port"])
-        self.driver = self.startWebdriverSession(port, url)
-
-    def startWebdriverSession(self, port, url, attempts=0):
+        if browser_params['host'] is None:
+            url = "http://worker-{port}:{base}/wd/hub".format(port=port, base=browser_params["base_port"])
+        else:
+            url = "http://{}:{}/wd/hub".format(browser_params['host'], port)
+        logging.debug("Starting remote webdriver")
         options = Options()
         options.add_argument("--headless")
-        max_attempts = 5
+        self.driver = self.startWebdriverSession(url, options, port)
+
+    def startWebdriverSession(self, url, options, port, attempts=0):
+
+        max_attempts = 10
+        attempts += 1
         try:
-            driver = webdriver.Remote(command_executor=url,
-                                      desired_capabilities=DesiredCapabilities.CHROME,
-                                      options=options)
-            self.port = port
-            return driver
-        except (RemoteDisconnected, ProtocolError) as e:
-            attempts += 1
+
+            self.driver = webdriver.Remote(command_executor=url,
+                                           desired_capabilities=DesiredCapabilities.CHROME,
+                                           options=options)
+
+        except (RemoteDisconnected, ProtocolError, MaxRetryError) as e:
             logging.warning(
                 "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
             if attempts < max_attempts:
+                self.startWebdriverSession(url, options, port, attempts)
                 sleep(3)
-                self.startWebdriverSession(url, port, attempts)
             else:
-                raise e
-        except MaxRetryError as e:
-            attempts += 1
-            if attempts < max_attempts:
                 requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{}".format(port, **nanny_params))
-                self.startWebdriverSession(url, port, attempts)
+                sleep(3)
+                port = requests.get(
+                    "http://{host}:{port}/{api_prefix}/getContainer".format(**nanny_params,
+                                                                                                  submission_port=port)).text
+                self.startWebdriverSession(url, options, port)
+        except MaxRetryError as e:
+            logging.warning(
+                "failed to communicate with selenium, trying again for {} more times".format(max_attempts - attempts))
+            if attempts < max_attempts:
+                self.startWebdriverSession(url, options, port, attempts)
+                sleep(3)
             else:
-                raise e
+                requests.get("http://{host}:{port}/{api_prefix}/freeContainer/{}".format(port, **nanny_params))
+                sleep(3)
+                port = requests.get(
+                    "http://{host}:{port}/{api_prefix}/getContainer/".format(**nanny_params)).text
+                self.startWebdriverSession(url, options, port)
+        logging.info("started webdriver session")
 
     def publishObject(self, url, streamName):
         """

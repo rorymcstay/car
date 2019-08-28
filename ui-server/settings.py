@@ -18,3 +18,11 @@ feed_params = {
     "image": "car_feed",
     "success": "feed has started"
 }
+
+database_parameters = {
+    "host": os.getenv("DATABSE_HOST", "localhost"),
+    "port": os.getenv("DATABASE_PORT", 5432),
+    "database": "postgres",
+    "user": "postgres",
+    "password": "postgres"
+}

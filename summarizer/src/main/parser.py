@@ -1,3 +1,5 @@
+import re
+
 import bs4
 import requests
 from bs4 import Tag, NavigableString
@@ -61,3 +63,45 @@ class ResultParser:
             else:
                 finish = None
         return {item: finish}
+
+    def _traverse(self, child, fields, images, fromClass=None):
+
+        if isinstance(child, Tag):
+            if child.name == 'img':
+                images.update({"image_".format(len(images) + 1): child.attrs.get("src")})
+                return
+            thisClass = child.attrs.get("class")
+            if thisClass is not None:
+                fromClass = thisClass
+            if isinstance(fromClass, list):
+                fromClass = "-".join(fromClass)
+            for item in child.children:
+                self._traverse(item, fields, images, fromClass)
+                if item.next_sibling is None:
+                    return
+        count = 0
+        for key in fields:
+            if key.startswith(fromClass):
+                count += 1
+        if count > 0:
+            fromClass = "{}_{}".format(fromClass, count + 1)
+        try:
+            text = child.text
+        except:
+            text = ''
+        if text:
+            field = child.text
+        else:
+            field = str(child).strip(' \n')
+        if field:
+            fields.update({fromClass: field})
+
+    def parseRow(self):
+        fields = {}
+        images = {}
+        index = re.findall(r'href="[^\"]+', str(self.soup))[0].split("=")[1].strip('"')
+        for child in self.soup:
+            self._traverse(child, fields, images)
+        fields.update({'url': index})
+        fields.update(images)
+        return fields

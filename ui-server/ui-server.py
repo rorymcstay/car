@@ -6,6 +6,7 @@ from flask_cors import CORS
 from src.main.feedmanager import FeedManager
 from src.main.scheduler import ScheduleManager
 from src.main.search import Search
+from src.main.tables import TableManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,6 +16,7 @@ CORS(app)
 Search.register(app)
 FeedManager.register(app)
 ScheduleManager.register(app)
+TableManager.register(app)
 
 print(app.url_map)
 

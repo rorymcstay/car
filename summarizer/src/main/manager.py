@@ -1,11 +1,18 @@
 import json
 import logging
+from datetime import time, datetime
+from typing import Dict, Any
 
+import pandas as pd
+from pandas.io import sql
+import psycopg2
 import hazelcast
 from hazelcast import ClientConfig, HazelcastClient
 from hazelcast.core import HazelcastJsonValue
+from psycopg2._psycopg import connection
+from sqlalchemy import create_engine
 
-from settings import hazelcast_params
+from settings import hazelcast_params, database_parameters
 
 config = hazelcast.ClientConfig()
 
@@ -30,3 +37,41 @@ class CacheManager:
         map.put(key=key, value=HazelcastJsonValue(json.dumps(result)))
 
         logging.debug('inserted object result {}'.format(key))
+
+
+class ObjectManager:
+    client: connection = psycopg2.connect(**database_parameters)
+    client.autocommit = True
+    numberFields = {}
+    batch_size = 100
+
+    batches: pd.DataFrame = {}
+
+    def _generateTable(self, name, number_fields):
+        self.numberFields.update({name: number_fields})
+        fields = map(lambda number: "field_{} VARCHAR(256)".format(number), range(number_fields))
+        definition = """
+        CREATE TABLE IF NOT EXISTS t_stg_{name}_results_{number_fields}(
+            url VARCHAR(256) PRIMARY KEY,
+            added TIMESTAMP NOT NULL,
+            {fields}
+        )
+        """.format(fields=",\n      ".join(list(fields)), name=name, number_fields=number_fields)
+        c = self.client.cursor()
+        c.execute(definition)
+
+
+    def prepareRow(self, name, row):
+        if name not in self.batches.keys():
+            self.batches.update({name: pd.DataFrame()})
+        engine = create_engine('postgresql://postgres:postgres@localhost:5432/postgres')
+        self.batches[name] = self.batches[name].append(row, ignore_index=True)
+        try:
+            if len(self.batches[name]) > self.batch_size:
+                self.batches[name] = self.batches[name].set_index(['url'])
+                self.batches[name].to_sql('t_stg_{}_results'.format(name), con=engine, if_exists='append')
+                self.batches[name] = pd.DataFrame()
+        except Exception as e:
+            self.batches[name] = pd.DataFrame()
+            logging.warning("failed row {}", e.args)
+            pass

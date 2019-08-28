@@ -7,6 +7,7 @@ from src.main.rest import ContainerController, ParameterController
 from flask_cors import CORS
 
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+logging.getLogger("urllib3").setLevel("INFO")
 logging.FileHandler('/var/tmp/myapp.log')
 
 
@@ -17,4 +18,4 @@ CORS(app)
 
 if __name__ == '__main__':
     print(app.url_map)
-    app.run(port=os.getenv("FLASK_HOST", 5000), host="0.0.0.0")
+    app.run(port=os.getenv("FLASK_PORT", 5003), host="0.0.0.0")

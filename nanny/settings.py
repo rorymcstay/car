@@ -7,7 +7,7 @@ hazelcast_params = {
 browser_params = {
     "image": os.getenv('BROWSER_IMAGE', 'selenium/standalone-chrome:3.141.59'),
     "base_port": int(os.getenv('BROWSER_BASE_PORT', 4444)),
-    "max": int(os.getenv("MAX_CONTAINERS", 4))
+    "max": int(os.getenv("MAX_CONTAINERS", 10))
 }
 mongo_params = {
     "host": os.getenv("MONGO_HOST", "localhost:27017"),

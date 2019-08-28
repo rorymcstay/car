@@ -88,4 +88,11 @@ services:
       - "8888:8888"
     env_file:
       - feed_platform/docker.env
+  database:
+    image: postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=feeds
+      - POSTGRES_DB=feeds
 

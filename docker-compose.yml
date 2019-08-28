@@ -3,7 +3,7 @@ version: '2'
 services:
 
   feed:
-    container_name: donedeal
+    container_name: feed
     build: ./feed
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -74,3 +74,4 @@ services:
     stop_grace_period: 5s
     env_file:
     - feed_platform/docker.env
+

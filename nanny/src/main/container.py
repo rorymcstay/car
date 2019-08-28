@@ -95,9 +95,10 @@ class ContainerManager:
             if e.status_code == 409:
                 browser = self.client.containers.get('worker-{port}'.format(port=port))
                 browser.restart()
+                self.wait_for_log(browser, BrowserConstants().CONTAINER_SUCCESS)
             else:
                 raise e
-        map.put(key=port, value=Container(port, active="yes", status=browser.status))
+        map.replace(key=port, value=Container(port, active="yes", status=browser.status))
         return str(port)
 
     def getContainer(self):
@@ -144,6 +145,7 @@ class ContainerManager:
             browser: Browser = self.client.containers.get('worker-{port}'.format(port=port))
             browser.kill()
             browser.remove()
+            logging.info("killed container {}".format(browser.name))
         except APIError as e:
             logging.info("couldn't kill container {} - {}".format(e.explanation, e.status_code))
         # TODO handle restarting container here - test that you can use a container after running for some time
@@ -162,20 +164,21 @@ class ContainerManager:
         workerPorts.put(key=port, value=Container(port, "no"))
         return "ok"
 
-    def wait_for_log(self, hub, partial_url):
+    def wait_for_log(self, hub, success_criteria):
         """
         Wait until the partial_url returns in the logs
         :type hub: docker.client.containers
         :param hub:
-        :param partial_url:
+        :param success_criteria:
         :return:
         """
         timeMax = time() + BrowserConstants().CONTAINER_TIMEOUT
-        while time() < timeMax:
+        line = 'error'
+        while line not in BrowserConstants().CONTAINER_SUCCESS or time() < timeMax:
             for line in hub.logs().decode().split('\n'):
-                if partial_url in line:
+                if success_criteria in line:
                     logging.debug(line)
-                    return line.split(' ')[-1]
+                    return
 
         # TODO handle RemoteDisconnected
         # TODO check for running containers before creation/worker to store running containers

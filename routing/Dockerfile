@@ -9,7 +9,7 @@ COPY src ./src
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
-COPY app.py ./app.py
+COPY routing.py ./app.py
 
 RUN python -m pip install pip
 # Installing packages

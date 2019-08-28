@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import traceback
 
 import bs4
@@ -41,6 +42,7 @@ class ObjectParser:
                     # add it to list to verify its a single result
                     out.append(raw_car)
             if len(out) == 0:
+                reportParameter('json_identifier')
                 logging.warning("no result found")
             return out
 
@@ -55,4 +57,18 @@ class ObjectParser:
             for val in rawJson:
                 v = find(value["field"], val)
                 item.update({value["name"]: list(v)})
+                if v is None:
+                    reportParameter("attrs.{}".format(value))
         return item
+
+
+
+
+def reportParameter(parameter_key=None):
+    endpoint = "http://{host}:{port}/parametermanager/{}/{}/{}".format(
+        os.getenv("NAME"),
+        parameter_key,
+        "feed",
+        **nanny_params
+    )
+    requests.get(endpoint)

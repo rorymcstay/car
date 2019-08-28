@@ -1,0 +1,3 @@
+CREATE USER summarizer;
+CREATE DATABASE feeds;
+GRANT ALL PRIVILEGES ON DATABASE feeds TO summarizer;
