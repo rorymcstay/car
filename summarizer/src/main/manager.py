@@ -1,12 +1,9 @@
 import json
 import logging
-from datetime import time, datetime
-from typing import Dict, Any
 
-import pandas as pd
-from pandas.io import sql
-import psycopg2
 import hazelcast
+import pandas as pd
+import psycopg2
 from hazelcast import ClientConfig, HazelcastClient
 from hazelcast.core import HazelcastJsonValue
 from psycopg2._psycopg import connection

@@ -4,12 +4,14 @@ import psycopg2 as psycopg2
 from flask import Response, request
 from flask_classy import FlaskView, route
 from psycopg2._psycopg import connection, cursor
+from pymongo import MongoClient
 
 from settings import database_parameters
-
+from settings import mongo_params
 
 class TableManager(FlaskView):
     client: connection = psycopg2.connect(**database_parameters)
+    mongo = MongoClient(**mongo_params)
     client.autocommit = True
     numberFields = {}
 
@@ -45,3 +47,16 @@ class TableManager(FlaskView):
         columns = [{"Header": column.name, "accessor": column.name} for column in c.description]
         response = {"data": data, "columns": columns}
         return Response(json.dumps(response))
+
+    def getMappingSchema(self):
+        form = self.mongo['mapping']['forms'].find_one({"type": "simple_mapping"})
+        return Response(json.dumps(form), mimetype='application/json')
+
+    def getMappingValue(self, name):
+        val = self.mongo['mapping']['values'].find_one({"name": name})
+        return Response(json.dumps(val), mimetype='application/json')
+
+    def uploadMapping(self, name):
+        val = request.json()
+        self.mongo['mapping']['values'].replace_one({"name": name}, val, upsert=True)
+        return "ok"
