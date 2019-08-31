@@ -34,7 +34,7 @@ class TableManager(FlaskView):
         """.format(tableName)
         c: cursor = self.client.cursor()
         c.execute(query)
-        results = [{"name": name[0], "accessor": name[0]} for name in c.fetchall()]
+        results = [name[0] for name in c.fetchall()]
         return Response(json.dumps(results), mimetype='application/json')
 
     @route('/getResults/<int:page>/<int:pageSize>', methods=['PUT', 'GET'])
@@ -54,9 +54,13 @@ class TableManager(FlaskView):
 
     def getMappingValue(self, name):
         val = self.mongo['mapping']['values'].find_one({"name": name})
+        if val is not None:
+            val = val.get('value')
         return Response(json.dumps(val), mimetype='application/json')
 
+    @route('/uploadMapping/<string:name>', methods=['PUT'])
     def uploadMapping(self, name):
-        val = request.json()
-        self.mongo['mapping']['values'].replace_one({"name": name}, val, upsert=True)
+        val = request.get_json()
+        obj = {"name": name, "value": val}
+        self.mongo['mapping']['values'].replace_one({"name": name}, obj, upsert=True)
         return "ok"
