@@ -47,21 +47,29 @@ class ScheduleManager(FlaskView):
     if len(sys.argv) > 1 and sys.argv[1] == '--clear':
         scheduler.remove_all_jobs()
     scheduler.start()
-
+    """
+    If you schedule jobs in a persistent job store during your application’s initialization, you MUST define an explicit ID for the job and use replace_existing=True or you will get a new copy of the job every time your application restarts!Tip
+    """
+    @route("scheduleContainer/<string:feedName>", methods=["PUT"])
     def scheduleContainer(self, feedName):
         job = ScheduledCollection(feedName, **request.get_json())
-        timing = {
-            job.increment_size: job.increment,
-            "run_date": datetime.now() + timedelta(job.increment)
-        }
-        self.scheduler.add_job(self.executor.startContainer, job.trigger, args=[feedName], id=feedName, **timing)
+        if job.trigger == 'in':
+            timing = {
+                "run_date": datetime.now() + timedelta(**{job.increment: int(job.increment_size)})
+            }
+        else:
+            timing = {
+                job.increment: int(job.increment_size),
+            }
+        self.scheduler.add_job(self.executor.startContainer, job.trigger, args=[feedName], id=feedName, replace_existing=True,**timing)
+        return 'ok'
 
     @route("addJob/<string:feedName>",methods=["PUT"])
     def addJob(self, feedName):
         job = ScheduledCollection(feedName, **request.get_json())
         timing = {
             job.increment_size: job.increment,
-            "run_date": datetime.now() + timedelta(job.increment)
+            "run_date": datetime.now() + timedelta(**{job.increment: int(job.increment_size)})
         }
         self.scheduler.add_job(self.executor.publishUrl, job.trigger, args=[feedName, job.url], id=job.url, **timing)
 

@@ -7,3 +7,4 @@ hazelcast-python-client
 flask-cors
 kafka-python
 docker
+psycopg2

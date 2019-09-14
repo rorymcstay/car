@@ -75,3 +75,11 @@ services:
     env_file:
     - feed_platform/docker.env
 
+  persistence:
+    container_name: persistence
+    build: ./persistence
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    stop_grace_period: 5s
+    env_file:
+      - feed_platform/docker.env

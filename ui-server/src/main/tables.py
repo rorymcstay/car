@@ -1,4 +1,6 @@
 import json
+from datetime import datetime
+from json import JSONEncoder
 
 import psycopg2 as psycopg2
 from flask import Response, request
@@ -24,7 +26,7 @@ class TableManager(FlaskView):
         c: cursor = self.client.cursor()
         c.execute(query)
         results = [name[0] for name in c.fetchall()]
-        return Response(json.dumps(results), mimetype='application/json')
+        return Response(json.dumps(results, cls=Serialiser), mimetype='application/json')
 
     def getAllColumns(self, tableName):
         query = """
@@ -35,7 +37,7 @@ class TableManager(FlaskView):
         c: cursor = self.client.cursor()
         c.execute(query)
         results = [name[0] for name in c.fetchall()]
-        return Response(json.dumps(results), mimetype='application/json')
+        return Response(json.dumps(results, cls=Serialiser), mimetype='application/json')
 
     @route('/getResults/<int:page>/<int:pageSize>', methods=['PUT', 'GET'])
     def getResults(self, page, pageSize):
@@ -46,7 +48,7 @@ class TableManager(FlaskView):
         data = list(map(lambda row: {c.description[i].name: row[i] for i in range(len(c.description))}, c.fetchall()))
         columns = [{"Header": column.name, "accessor": column.name} for column in c.description]
         response = {"data": data, "columns": columns}
-        return Response(json.dumps(response))
+        return Response(json.dumps(response, cls=Serialiser))
 
     def getMappingSchema(self):
         form = self.mongo['mapping']['forms'].find_one({"type": "simple_mapping"})
@@ -56,7 +58,7 @@ class TableManager(FlaskView):
         val = self.mongo['mapping']['values'].find_one({"name": name})
         if val is not None:
             val = val.get('value')
-        return Response(json.dumps(val), mimetype='application/json')
+        return Response(json.dumps(val, cls=Serialiser), mimetype='application/json')
 
     @route('/uploadMapping/<string:name>', methods=['PUT'])
     def uploadMapping(self, name):
@@ -64,3 +66,11 @@ class TableManager(FlaskView):
         obj = {"name": name, "value": val}
         self.mongo['mapping']['values'].replace_one({"name": name}, obj, upsert=True)
         return "ok"
+
+class Serialiser(JSONEncoder):
+
+    def default(self, o):
+        if isinstance(o, datetime):
+            return str(o).split('.')[0]
+
+

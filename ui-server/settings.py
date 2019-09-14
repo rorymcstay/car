@@ -20,7 +20,7 @@ feed_params = {
 }
 
 database_parameters = {
-    "host": os.getenv("DATABSE_HOST", "localhost"),
+    "host": os.getenv("DATABSE_HOST", "database"),
     "port": os.getenv("DATABASE_PORT", 5432),
     "database": "postgres",
     "user": "postgres",

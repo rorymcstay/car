@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 
 import hazelcast
 import pandas as pd
@@ -66,6 +67,7 @@ class ObjectManager:
         try:
             if len(self.batches[name]) > self.batch_size:
                 self.batches[name] = self.batches[name].set_index(['url'])
+                self.batches[name]['added'] = datetime.now()
                 self.batches[name].to_sql('t_stg_{}_results'.format(name), con=engine, if_exists='append')
                 self.batches[name] = pd.DataFrame()
         except Exception as e:

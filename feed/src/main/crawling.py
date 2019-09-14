@@ -228,7 +228,7 @@ class WebCrawler:
 
 
 def reportParameter(parameter_key=None):
-    endpoint = "http://{host}:{port}/parametermanager/{}/{}/{}".format(
+    endpoint = "http://{host}:{port}/parametermanager/reportParameter/{}/{}/{}".format(
         os.getenv("NAME"),
         parameter_key,
         "feed",

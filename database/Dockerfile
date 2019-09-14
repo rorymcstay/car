@@ -1,5 +1,5 @@
-FROM postgres:latest
-FROM library/postgres
-ENV POSTGRES_USER summarizer
-ENV POSTGRES_PASSWORD feeds
-ENV POSTGRES_DB feeds
+FROM postgres:11.1-alpine
+
+COPY init.sql /docker-entrypoint-initdb.d/
+
+EXPOSE 5432
