@@ -2,13 +2,16 @@ FROM python:3.6-alpine
 
 RUN mkdir -p /home
 
-RUN sudo apt install libpq-dev
+
 
 WORKDIR /home
 
 # Copying over necessary files
 COPY src ./src
 
+RUN apk update && \
+    apk add --virtual build-deps gcc python-dev musl-dev && \
+    apk add postgresql-dev
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
 COPY summarizer.py ./app.py

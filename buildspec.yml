@@ -1,0 +1,26 @@
+version: 0.2
+
+phases:
+
+  pre_build:
+    commands:
+    - echo Logging in to Amazon ECR...
+    - git clone ${FEED_PLATFORM_REPO} platform
+    - source platform/environment.sh
+    - source platform/build/build.sh
+    - set_image_names()
+    - aws --version
+    - AWS_DEFAULT_REGION=us-east-1
+    - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email
+
+  build:
+    commands:
+    - echo Build started on `date`
+    - echo Building the Docker images...
+    - build_images()
+
+  post_build:
+    commands:
+    - echo Build completed on `date`
+    - echo Pushing the Docker images...
+    - push_images()

@@ -3,8 +3,9 @@ version: '2'
 services:
 
   feed:
-    container_name: feed
-    build: ./feed
+    container_name: leader
+    image: ${PROJECT_NAME}/leader
+    build: ./leader
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -16,6 +17,7 @@ services:
 
   worker:
     build: ./worker
+    image: ${PROJECT_NAME}/worker
     volumes:
     - /var/run/docker.docker:/sock/var/run.sock
     depends_on:
@@ -27,6 +29,7 @@ services:
   router:
     container_name: router
     build: ./routing
+    image: ${PROJECT_NAME}/router
     ports:
     - "5002:5000"
     stop_grace_period: 5s
@@ -36,6 +39,7 @@ services:
   nanny:
     container_name: nanny
     build: ./nanny
+    image: nanny
     volumes:
     - ./config:/home/config
     - /var/run/docker.sock:/var/run/docker.sock
@@ -50,6 +54,7 @@ services:
   ui-server:
     container_name: ui-server
     build: ./ui-server
+    image: ${PROJECT_NAME}/ui-server
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
@@ -60,6 +65,7 @@ services:
   summarizer:
     container_name: summarizer
     build: ./summarizer
+    image: ${PROJECT_NAME}/summarizer
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     stop_grace_period: 5s
@@ -69,6 +75,7 @@ services:
   mapper:
     container_name: mapper
     build: ./mapper
+    image: ${PROJECT_NAME}/mapper
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
     stop_grace_period: 5s
@@ -78,6 +85,7 @@ services:
   persistence:
     container_name: persistence
     build: ./persistence
+    image: ${PROJECT_NAME}/persistence
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     stop_grace_period: 5s

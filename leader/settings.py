@@ -30,6 +30,6 @@ nanny_params = {
 }
 
 
-params = requests.get("http://{host}:{port}/{params_manager}/getParameter/feed/{name}".format(**nanny_params, name=os.getenv("NAME")))
+params = requests.get("http://{host}:{port}/{params_manager}/getParameter/leader/{name}".format(**nanny_params, name=os.getenv("NAME")))
 
 feed_params = params.json()

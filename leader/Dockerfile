@@ -9,7 +9,7 @@ COPY src ./src
 
 COPY requirements.txt ./requirements.txt
 COPY settings.py ./settings.py
-COPY feed.py ./app.py
+COPY leader.py ./app.py
 
 RUN python -m pip install pip
 # Installing packages

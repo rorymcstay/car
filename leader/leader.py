@@ -41,7 +41,7 @@ market: FeedManager = FeedManager()
 market.setHome()
 if __name__ == '__main__':
     killer = GracefulKiller()
-    start.warning("feed has started")
+    start.warning("leader has started")
     while True:
         timeStart = time()
         try:
